@@ -1,0 +1,55 @@
+INFINITITE SWORD MOD REQUIREMENTS
+=====================================
+Created for: Jasper
+Date: October 14, 2025
+
+OVERVIEW
+--------
+A powerful mystical sword made from a new material called "Infinitite". The sword has a black blade with purple veins that glow with mystical energy, and it's stronger than diamond swords with special magical effects.
+
+NEW MATERIAL: INFINITITE
+------------------------
+Name: Infinitite
+Recipe: 4 Diamonds + 5 Iron Ingots = 1 Infinitite Ingot
+Crafting Location: Standard crafting table
+Purpose: Used to create the Infinitite Sword
+
+INFINITITE SWORD SPECIFICATIONS
+------------------------------
+
+CRAFTING RECIPE:
+- Uses standard sword crafting pattern
+- 2 Infinitite Ingots + 1 Stick = 1 Infinitite Sword
+- Crafted at: Regular crafting table
+
+APPEARANCE:
+- Blade Color: Black
+- Special Design: Purple veins running through the blade
+- Glow Effect: Steady mystical purple glow (same color as veins)
+- Overall Look: Dark and mystical
+
+COMBAT STATS:
+- Attack Damage: 11 (compared to Diamond sword's 7)
+- Durability: 3124 (twice as much as Diamond sword's 1562)
+- Attack Speed: Same as Diamond sword
+
+SPECIAL ABILITIES:
+- Blindness Effect: Enemies hit by the sword get blinded
+- Poison Effect: Enemies hit by the sword get poisoned
+- Effect Duration: To be determined during development
+- Affects: All enemies and players hit by the sword
+
+TECHNICAL NOTES:
+- Infinitite material will need custom textures
+- Sword will need custom model with glow effect
+- Special effects will trigger on successful hit
+- Glow should be visible in dark areas
+- Purple color should match between veins and glow
+
+FUTURE CONSIDERATIONS:
+- Effect duration balancing
+- Possible additional Infinitite tools/armor
+- Sound effects for the sword
+- Particle effects when swinging
+
+STATUS: Requirements Complete - Ready for Development Planning
