@@ -1,6 +1,6 @@
 {
   "parent": "item/generated",
   "textures": {
-    "layer0": "examplemod:item/sapphire"
+    "layer0": "jaspertutorial:item/sapphire"
   }
 }
