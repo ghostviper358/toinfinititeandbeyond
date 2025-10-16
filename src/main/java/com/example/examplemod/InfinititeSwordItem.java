@@ -15,9 +15,9 @@ import net.minecraft.world.item.ItemStack;
  * - Applies BLINDNESS for 3 seconds on hit
  * - Applies POISON for 3 seconds on hit
  */
-public class InfiniteSwordItem extends Item {
+public class InfinititeSwordItem extends Item {
 
-    public InfiniteSwordItem(Properties properties) {
+    public InfinititeSwordItem(Properties properties) {
         super(properties);
     }
 

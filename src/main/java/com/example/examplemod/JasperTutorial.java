@@ -2,8 +2,13 @@ package com.example.examplemod;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EquipmentSlotGroup;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
@@ -42,10 +47,21 @@ public final class JasperTutorial {
 
     // Creates the Infinitite Sword with special combat effects
     public static final RegistryObject<Item> INFINITITE_SWORD = ITEMS.register("infinitite_sword",
-        () -> new InfiniteSwordItem(new Item.Properties()
+        () -> new InfinititeSwordItem(new Item.Properties()
             .setId(ITEMS.key("infinitite_sword"))
             .durability(3124) // Double diamond sword durability (1562 * 2)
-            // TODO: Add attack damage attributes via ItemAttributeModifiers
+            .attributes(ItemAttributeModifiers.builder()
+                .add(
+                    Attributes.ATTACK_DAMAGE,
+                    new AttributeModifier(
+                        ResourceLocation.withDefaultNamespace("infinitite_attack_damage"),
+                        7.0, // +7 damage (4 base + 7 = 11 total)
+                        AttributeModifier.Operation.ADD_VALUE
+                    ),
+                    EquipmentSlotGroup.MAINHAND
+                )
+                .build()
+            )
         )
     );
 
