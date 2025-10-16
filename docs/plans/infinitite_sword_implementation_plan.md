@@ -44,11 +44,10 @@ The existing mod structure follows standard Minecraft Forge patterns:
 - `C:\Data\Repositories\forge-tutorial-1.21.X\src\main\java\com\example\examplemod\item\InfiniteSwordItem.java`
 
 **Implementation approach:**
-- Create custom `InfiniteSwordItem` class extending `SwordItem`
+- Create custom `InfinititeSwordItem` class extending `SwordItem`
 - Override `hurtEnemy()` method to apply Blindness and Poison effects
 - Create custom `Tier` implementation for Infinitite material properties
 - Register sword item in main mod class
-
 **Technical details:**
 - Attack damage: 11 (requires Tier with attack damage bonus of 7, since SwordItem adds 4 base)
 - Durability: 3124 (2x diamond sword's 1562)

@@ -40,6 +40,15 @@ public final class JasperTutorial {
         )
     );
 
+    // Creates the Infinitite Sword with special combat effects
+    public static final RegistryObject<Item> INFINITITE_SWORD = ITEMS.register("infinitite_sword",
+        () -> new InfiniteSwordItem(new Item.Properties()
+            .setId(ITEMS.key("infinitite_sword"))
+            .durability(3124) // Double diamond sword durability (1562 * 2)
+            // TODO: Add attack damage attributes via ItemAttributeModifiers
+        )
+    );
+
     public JasperTutorial(FMLJavaModLoadingContext context) {
         var modBusGroup = context.getModBusGroup();
 
@@ -50,11 +59,14 @@ public final class JasperTutorial {
         BuildCreativeModeTabContentsEvent.getBus(modBusGroup).addListener(JasperTutorial::addCreative);
     }
 
-    // Add our custom items to the Ingredients tab
-    private static void addCreative(BuildCreativeModeTabContentsEvent event) {
+    // Add our custom items to creative tabs
+    public static void addCreative(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(SAPPHIRE.get());
             event.accept(INFINITITE_INGOT.get());
+        }
+        if (event.getTabKey() == CreativeModeTabs.COMBAT) {
+            event.accept(INFINITITE_SWORD.get());
         }
     }
 
