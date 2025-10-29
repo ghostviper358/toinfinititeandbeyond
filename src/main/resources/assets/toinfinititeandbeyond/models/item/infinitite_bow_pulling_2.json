@@ -1,0 +1,6 @@
+{
+  "parent": "toinfinititeandbeyond:item/infinitite_bow",
+  "textures": {
+    "layer0": "toinfinititeandbeyond:item/infinitite_bow_pulling_2"
+  }
+}

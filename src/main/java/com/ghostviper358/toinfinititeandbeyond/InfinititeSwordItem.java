@@ -1,4 +1,4 @@
-package com.example.examplemod;
+package com.ghostviper358.toinfinititeandbeyond;
 
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
