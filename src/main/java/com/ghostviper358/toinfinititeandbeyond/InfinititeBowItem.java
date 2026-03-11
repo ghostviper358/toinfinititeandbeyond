@@ -51,21 +51,27 @@ public class InfinititeBowItem extends BowItem {
             }
 
             if (!level.isClientSide) {
+                // Check if using Infinitite Arrows for special bonuses
+                boolean isInfinititeArrow = projectileStack.is(ToInfinititeAndBeyond.INFINITITE_ARROW_ITEM.get());
+
                 // Find valid target (entity without Infinitite items)
                 LivingEntity target = findValidTarget(player, level);
 
                 // Create custom arrow with proper ItemStacks
                 ItemStack arrowStack = projectileStack.isEmpty() ? new ItemStack(Items.ARROW) : projectileStack.copy();
                 InfinititeArrowEntity arrow = new InfinititeArrowEntity(level, player, arrowStack, stack);
-                arrow.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, power * 3.0F, 1.0F);
+
+                // SPECIAL BONUS: Infinitite Arrows fly 50% faster and have stronger homing
+                float speedMultiplier = isInfinititeArrow ? 4.5F : 3.0F; // 50% speed boost
+                arrow.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, power * speedMultiplier, 1.0F);
 
                 // Set the locked target if we found one
                 if (target != null) {
                     arrow.setLockedTarget(target);
                 }
 
-                // Set arrow properties
-                arrow.setCritArrow(power == 1.0F);
+                // Set arrow properties - Infinitite Arrows always crit
+                arrow.setCritArrow(isInfinititeArrow || power == 1.0F);
 
                 // Add arrow to world
                 level.addFreshEntity(arrow);

@@ -79,6 +79,13 @@ public final class ToInfinititeAndBeyond {
         )
     );
 
+    // Creates the Infinitite Arrow - special ammo that works extra well with Infinitite Bow
+    public static final RegistryObject<Item> INFINITITE_ARROW_ITEM = ITEMS.register("infinitite_arrow",
+        () -> new Item(new Item.Properties()
+            .setId(ITEMS.key("infinitite_arrow"))
+        )
+    );
+
     // Register the custom Infinitite Arrow entity type
     public static final RegistryObject<EntityType<InfinititeArrowEntity>> INFINITITE_ARROW = ENTITY_TYPES.register("infinitite_arrow",
         () -> EntityType.Builder.<InfinititeArrowEntity>of(InfinititeArrowEntity::new, MobCategory.MISC)
@@ -87,6 +94,59 @@ public final class ToInfinititeAndBeyond {
             .updateInterval(20)
             .build(ENTITY_TYPES.key("infinitite_arrow"))
     );
+
+    // Creates the Infinitite Chest Plate with permanent buffs, damage reflection, and +5 hearts
+    public static final RegistryObject<Item> INFINITITE_CHESTPLATE = ITEMS.register("infinitite_chestplate",
+        () -> new InfinititeArmorItem(
+            new Item.Properties()
+                .setId(ITEMS.key("infinitite_chestplate"))
+                .durability(InfinititeArmorMaterial.DURABILITY)
+                .attributes(ItemAttributeModifiers.builder()
+                    .add(
+                        Attributes.MAX_HEALTH,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("infinitite_health_boost"),
+                            10.0, // +10 health (5 hearts)
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.CHEST
+                    )
+                    .add(
+                        Attributes.ARMOR,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("infinitite_armor"),
+                            (double) InfinititeArmorMaterial.ARMOR, // +12 armor points
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.CHEST
+                    )
+                    .add(
+                        Attributes.ARMOR_TOUGHNESS,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("infinitite_toughness"),
+                            (double) InfinititeArmorMaterial.TOUGHNESS, // +5 toughness
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.CHEST
+                    )
+                    .add(
+                        Attributes.KNOCKBACK_RESISTANCE,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("infinitite_knockback_resistance"),
+                            (double) InfinititeArmorMaterial.KNOCKBACK_RESISTANCE, // 20% knockback resistance
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.CHEST
+                    )
+                    .build()
+                )
+        )
+    );
+
+    // Helper method to create ResourceLocation
+    public static ResourceLocation resourceLocation(String path) {
+        return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
+    }
 
     public ToInfinititeAndBeyond(FMLJavaModLoadingContext context) {
         var modBusGroup = context.getModBusGroup();
@@ -110,6 +170,8 @@ public final class ToInfinititeAndBeyond {
         if (event.getTabKey() == CreativeModeTabs.COMBAT) {
             event.accept(INFINITITE_SWORD.get());
             event.accept(INFINITITE_BOW.get());
+            event.accept(INFINITITE_ARROW_ITEM.get());
+            event.accept(INFINITITE_CHESTPLATE.get());
         }
     }
 
