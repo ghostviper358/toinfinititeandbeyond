@@ -21,6 +21,7 @@ import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraftforge.event.TickEvent;
@@ -215,6 +216,42 @@ public final class ToInfinititeAndBeyond {
         )
     );
 
+    // Creates the Infinitite Helmet - Mind Shield + Star Vision + Cosmic Echo + Ore Vision
+    public static final RegistryObject<Item> INFINITITE_HELMET = ITEMS.register("infinitite_helmet",
+        () -> new InfinititeHelmetItem(
+            new Item.Properties()
+                .setId(ITEMS.key("infinitite_helmet"))
+                .durability(InfinititeArmorMaterial.DURABILITY)
+                .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.HEAD)
+                    .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .setAsset(net.minecraft.resources.ResourceKey.create(EquipmentAssets.ROOT_ID,
+                        ResourceLocation.fromNamespaceAndPath(MOD_ID, "infinitite_armor")))
+                    .build()
+                )
+                .attributes(ItemAttributeModifiers.builder()
+                    .add(
+                        Attributes.ARMOR,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("infinitite_helmet_armor"),
+                            6.0, // +6 armor (netherite helmet = 3)
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.HEAD
+                    )
+                    .add(
+                        Attributes.ARMOR_TOUGHNESS,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("infinitite_helmet_toughness"),
+                            4.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.HEAD
+                    )
+                    .build()
+                )
+        )
+    );
+
     // Helper method to create ResourceLocation
     public static ResourceLocation resourceLocation(String path) {
         return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
@@ -251,6 +288,7 @@ public final class ToInfinititeAndBeyond {
             event.accept(INFINITITE_SWORD.get());
             event.accept(INFINITITE_BOW.get());
             event.accept(INFINITITE_ARROW_ITEM.get());
+            event.accept(INFINITITE_HELMET.get());
             event.accept(INFINITITE_CHESTPLATE.get());
             event.accept(INFINITITE_LEGGINGS.get());
         }
@@ -309,11 +347,18 @@ public final class ToInfinititeAndBeyond {
             return true; // cancel the event = no damage taken
         }
 
-        // Reflect 25% of melee damage back to attacker
+        // Reflect 25% of melee damage back to attacker (chest plate)
         Entity attacker = event.getSource().getEntity();
         if (attacker != null) {
             InfinititeArmorItem.handleDamageReflection(entity, attacker, event.getAmount());
         }
+
+        // COSMIC ECHO (helmet): lightning strikes nearby mobs when player is hit
+        if (entity instanceof Player player && InfinititeHelmetItem.isWearing(player)
+                && entity.level() instanceof ServerLevel serverLevel) {
+            InfinititeHelmetItem.handleCosmicEcho(player, event.getAmount(), serverLevel);
+        }
+
         return false;
     }
 }
