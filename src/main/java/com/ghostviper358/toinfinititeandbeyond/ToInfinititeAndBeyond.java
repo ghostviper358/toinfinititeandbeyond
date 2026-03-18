@@ -17,6 +17,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
@@ -114,6 +115,8 @@ public final class ToInfinititeAndBeyond {
                 .durability(InfinititeArmorMaterial.DURABILITY)
                 .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.CHEST)
                     .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .setAsset(net.minecraft.resources.ResourceKey.create(EquipmentAssets.ROOT_ID,
+                        ResourceLocation.fromNamespaceAndPath(MOD_ID, "infinitite_armor")))
                     .build()
                 )
                 .attributes(ItemAttributeModifiers.builder()
@@ -166,6 +169,8 @@ public final class ToInfinititeAndBeyond {
                 .durability(InfinititeArmorMaterial.DURABILITY)
                 .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.LEGS)
                     .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .setAsset(net.minecraft.resources.ResourceKey.create(EquipmentAssets.ROOT_ID,
+                        ResourceLocation.fromNamespaceAndPath(MOD_ID, "infinitite_armor")))
                     .build()
                 )
                 .attributes(ItemAttributeModifiers.builder()
