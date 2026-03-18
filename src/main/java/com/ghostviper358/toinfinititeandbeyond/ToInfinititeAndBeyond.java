@@ -14,9 +14,13 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.DropExperienceBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraftforge.api.distmarker.Dist;
@@ -47,8 +51,34 @@ public final class ToInfinititeAndBeyond {
     // Create a Deferred Register to hold Items
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MOD_ID);
 
+    // Create a Deferred Register to hold Blocks
+    public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, MOD_ID);
+
     // Create a Deferred Register to hold Entity Types
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, MOD_ID);
+
+    // Creates the Void Ore block - glows at light level 7, drops 3-7 XP, requires correct tool
+    public static final RegistryObject<Block> VOID_ORE = BLOCKS.register("void_ore",
+        () -> new DropExperienceBlock(
+            net.minecraft.util.valueproviders.UniformInt.of(3, 7),
+            BlockBehaviour.Properties.of()
+                .setId(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(MOD_ID, "void_ore")))
+                .strength(3.0f, 3.0f)
+                .requiresCorrectToolForDrops()
+                .lightLevel(state -> 7)
+                .sound(net.minecraft.world.level.block.SoundType.STONE)
+        )
+    );
+
+    // Creates the Void Ore block item (so players can hold and place it)
+    public static final RegistryObject<Item> VOID_ORE_ITEM = ITEMS.register("void_ore",
+        () -> new BlockItem(VOID_ORE.get(), new Item.Properties().setId(ITEMS.key("void_ore")))
+    );
+
+    // Creates the Void Ingot - a rare crafting material from Void Ore
+    public static final RegistryObject<Item> VOID_INGOT = ITEMS.register("void_ingot",
+        () -> new Item(new Item.Properties().setId(ITEMS.key("void_ingot")))
+    );
 
     // Creates the Sapphire item
     public static final RegistryObject<Item> SAPPHIRE = ITEMS.register("sapphire",
@@ -308,6 +338,9 @@ public final class ToInfinititeAndBeyond {
         // Register the Deferred Register to the mod event bus so items get registered
         ITEMS.register(modBusGroup);
 
+        // Register the blocks
+        BLOCKS.register(modBusGroup);
+
         // Register the entity types
         ENTITY_TYPES.register(modBusGroup);
 
@@ -328,6 +361,10 @@ public final class ToInfinititeAndBeyond {
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(SAPPHIRE.get());
             event.accept(INFINITITE_INGOT.get());
+            event.accept(VOID_INGOT.get());
+        }
+        if (event.getTabKey() == CreativeModeTabs.BUILDING_BLOCKS) {
+            event.accept(VOID_ORE_ITEM.get());
         }
         if (event.getTabKey() == CreativeModeTabs.COMBAT) {
             event.accept(INFINITITE_SWORD.get());
