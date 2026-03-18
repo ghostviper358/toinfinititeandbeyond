@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "combat",
+  "pattern": [
+    "I I",
+    "III",
+    "III"
+  ],
+  "key": {
+    "I": "toinfinititeandbeyond:infinitite_ingot"
+  },
+  "result": {
+    "id": "toinfinititeandbeyond:infinitite_chestplate",
+    "count": 1
+  }
+}

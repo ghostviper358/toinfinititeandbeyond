@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "combat",
+  "pattern": [
+    "III",
+    "I I"
+  ],
+  "key": {
+    "I": "toinfinititeandbeyond:infinitite_ingot"
+  },
+  "result": {
+    "id": "toinfinititeandbeyond:infinitite_helmet",
+    "count": 1
+  }
+}

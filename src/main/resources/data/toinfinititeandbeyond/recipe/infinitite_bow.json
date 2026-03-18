@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "combat",
+  "pattern": [
+    " IS",
+    "I S",
+    " IS"
+  ],
+  "key": {
+    "I": "toinfinititeandbeyond:infinitite_ingot",
+    "S": "minecraft:stick"
+  },
+  "result": {
+    "id": "toinfinititeandbeyond:infinitite_bow",
+    "count": 1
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "combat",
+  "pattern": [
+    "I I",
+    "I I"
+  ],
+  "key": {
+    "I": "toinfinititeandbeyond:infinitite_ingot"
+  },
+  "result": {
+    "id": "toinfinititeandbeyond:infinitite_boots",
+    "count": 1
+  }
+}
