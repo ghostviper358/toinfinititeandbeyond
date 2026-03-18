@@ -20,7 +20,10 @@ import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingFallEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -155,6 +158,58 @@ public final class ToInfinititeAndBeyond {
         )
     );
 
+    // Creates the Infinitite Leggings - Rocket Legs + Speed Demon + Ghost Walker + Gravity Master
+    public static final RegistryObject<Item> INFINITITE_LEGGINGS = ITEMS.register("infinitite_leggings",
+        () -> new InfinititeLeggingsItem(
+            new Item.Properties()
+                .setId(ITEMS.key("infinitite_leggings"))
+                .durability(InfinititeArmorMaterial.DURABILITY)
+                .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.LEGS)
+                    .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .build()
+                )
+                .attributes(ItemAttributeModifiers.builder()
+                    .add(
+                        Attributes.ARMOR,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("infinitite_leggings_armor"),
+                            10.0, // +10 armor (netherite legs = 6)
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.LEGS
+                    )
+                    .add(
+                        Attributes.ARMOR_TOUGHNESS,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("infinitite_leggings_toughness"),
+                            4.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.LEGS
+                    )
+                    .add(
+                        Attributes.MOVEMENT_SPEED,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("infinitite_leggings_speed"),
+                            0.04, // +40% move speed
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.LEGS
+                    )
+                    .add(
+                        Attributes.JUMP_STRENGTH,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("infinitite_leggings_jump"),
+                            0.5, // higher jumps
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.LEGS
+                    )
+                    .build()
+                )
+        )
+    );
+
     // Helper method to create ResourceLocation
     public static ResourceLocation resourceLocation(String path) {
         return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
@@ -175,6 +230,10 @@ public final class ToInfinititeAndBeyond {
         // Register game event for Infinitite Chest Plate abilities (ranged immunity + damage reflection)
         // Using Predicate form: returning true cancels the event (blocks the damage)
         LivingHurtEvent.BUS.addListener((java.util.function.Predicate<LivingHurtEvent>) ToInfinititeAndBeyond::onLivingHurt);
+
+        // Register events for Infinitite Leggings abilities
+        LivingFallEvent.BUS.addListener((java.util.function.Predicate<LivingFallEvent>) ToInfinititeAndBeyond::onLivingFall);
+        TickEvent.PlayerTickEvent.Post.BUS.addListener(ToInfinititeAndBeyond::onPlayerTick);
     }
 
     // Add our custom items to creative tabs
@@ -188,6 +247,7 @@ public final class ToInfinititeAndBeyond {
             event.accept(INFINITITE_BOW.get());
             event.accept(INFINITITE_ARROW_ITEM.get());
             event.accept(INFINITITE_CHESTPLATE.get());
+            event.accept(INFINITITE_LEGGINGS.get());
         }
     }
 
@@ -199,6 +259,26 @@ public final class ToInfinititeAndBeyond {
             // Some client setup code
             LOGGER.info("HELLO FROM CLIENT SETUP");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+        }
+    }
+
+    /**
+     * ROCKET LEGS: cancel fall damage and trigger landing shockwave.
+     */
+    public static boolean onLivingFall(LivingFallEvent event) {
+        if (event.getEntity() instanceof Player player && InfinititeLeggingsItem.isWearing(player)) {
+            return InfinititeLeggingsItem.handleLanding(player, event.getDistance());
+        }
+        return false;
+    }
+
+    /**
+     * GRAVITY MASTER: slam down when sneaking in mid-air.
+     */
+    public static void onPlayerTick(TickEvent.PlayerTickEvent.Post event) {
+        Player player = event.player;
+        if (!player.level().isClientSide()) {
+            InfinititeLeggingsItem.handleGravitySlam(player);
         }
     }
 
