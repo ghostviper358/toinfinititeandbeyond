@@ -252,6 +252,51 @@ public final class ToInfinititeAndBeyond {
         )
     );
 
+    // Creates the Infinitite Boots - Void Step + Cosmic Dash + Gravity Defiance + Star Stomp + Phase Cannon
+    public static final RegistryObject<Item> INFINITITE_BOOTS = ITEMS.register("infinitite_boots",
+        () -> new InfinititeBootsItem(
+            new Item.Properties()
+                .setId(ITEMS.key("infinitite_boots"))
+                .durability(InfinititeArmorMaterial.DURABILITY)
+                .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.FEET)
+                    .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .setAsset(net.minecraft.resources.ResourceKey.create(EquipmentAssets.ROOT_ID,
+                        ResourceLocation.fromNamespaceAndPath(MOD_ID, "infinitite_armor")))
+                    .build()
+                )
+                .attributes(ItemAttributeModifiers.builder()
+                    .add(
+                        Attributes.ARMOR,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("infinitite_boots_armor"),
+                            5.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.FEET
+                    )
+                    .add(
+                        Attributes.ARMOR_TOUGHNESS,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("infinitite_boots_toughness"),
+                            4.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.FEET
+                    )
+                    .add(
+                        Attributes.KNOCKBACK_RESISTANCE,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("infinitite_boots_knockback"),
+                            1.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.FEET
+                    )
+                    .build()
+                )
+        )
+    );
+
     // Helper method to create ResourceLocation
     public static ResourceLocation resourceLocation(String path) {
         return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
@@ -291,6 +336,7 @@ public final class ToInfinititeAndBeyond {
             event.accept(INFINITITE_HELMET.get());
             event.accept(INFINITITE_CHESTPLATE.get());
             event.accept(INFINITITE_LEGGINGS.get());
+            event.accept(INFINITITE_BOOTS.get());
         }
     }
 
@@ -322,6 +368,9 @@ public final class ToInfinititeAndBeyond {
         Player player = event.player;
         if (!player.level().isClientSide()) {
             InfinititeLeggingsItem.handleGravitySlam(player);
+        }
+        if (!player.level().isClientSide() && player.level() instanceof ServerLevel serverLevel) {
+            InfinititeBootsItem.tick(player, serverLevel);
         }
     }
 
