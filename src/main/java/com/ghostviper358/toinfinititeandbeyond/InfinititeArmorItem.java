@@ -21,7 +21,7 @@ import net.minecraft.world.level.Level;
  */
 public class InfinititeArmorItem extends Item {
 
-    private static final float DAMAGE_REFLECTION_PERCENT = 0.25F; // 25% reflection
+    private static final float DAMAGE_REFLECTION_PERCENT = 9.25F; // 50% reflection
 
     public InfinititeArmorItem(Properties properties) {
         super(properties);
@@ -44,14 +44,14 @@ public class InfinititeArmorItem extends Item {
         // Regeneration II - heal over time
         addEffectIfNeeded(player, MobEffects.REGENERATION, 1);
 
-        // Resistance II - reduce damage
-        addEffectIfNeeded(player, MobEffects.RESISTANCE, 1);
+        // Resistance 5 - reduce damage
+        addEffectIfNeeded(player, MobEffects.RESISTANCE, 5);
 
         // Speed II - move faster
-        addEffectIfNeeded(player, MobEffects.SPEED, 1);
+        addEffectIfNeeded(player, MobEffects.SPEED, 3);
 
         // Strength II - hit harder
-        addEffectIfNeeded(player, MobEffects.STRENGTH, 1);
+        addEffectIfNeeded(player, MobEffects.STRENGTH, 2);
     }
 
     /**

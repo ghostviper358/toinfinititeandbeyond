@@ -2,18 +2,26 @@ package com.ghostviper358.toinfinititeandbeyond;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EquipmentSlotGroup;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.minecraft.world.item.equipment.Equippable;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
@@ -101,6 +109,10 @@ public final class ToInfinititeAndBeyond {
             new Item.Properties()
                 .setId(ITEMS.key("infinitite_chestplate"))
                 .durability(InfinititeArmorMaterial.DURABILITY)
+                .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.CHEST)
+                    .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .build()
+                )
                 .attributes(ItemAttributeModifiers.builder()
                     .add(
                         Attributes.MAX_HEALTH,
@@ -159,6 +171,10 @@ public final class ToInfinititeAndBeyond {
 
         // Register the item to a creative tab
         BuildCreativeModeTabContentsEvent.getBus(modBusGroup).addListener(ToInfinititeAndBeyond::addCreative);
+
+        // Register game event for Infinitite Chest Plate abilities (ranged immunity + damage reflection)
+        // Using Predicate form: returning true cancels the event (blocks the damage)
+        LivingHurtEvent.BUS.addListener((java.util.function.Predicate<LivingHurtEvent>) ToInfinititeAndBeyond::onLivingHurt);
     }
 
     // Add our custom items to creative tabs
@@ -184,5 +200,35 @@ public final class ToInfinititeAndBeyond {
             LOGGER.info("HELLO FROM CLIENT SETUP");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
         }
+    }
+
+    /**
+     * Called when a living entity takes damage.
+     * Handles two Infinitite Chest Plate abilities:
+     * 1. Invincibility to ranged (projectile) attacks - returns true to cancel
+     * 2. 25% damage reflection back to melee attackers
+     *
+     * @return true to cancel the damage event (block the hit entirely)
+     */
+    public static boolean onLivingHurt(LivingHurtEvent event) {
+        LivingEntity entity = event.getEntity();
+        // Only apply if wearing the Infinitite Chest Plate
+        if (!(entity.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof InfinititeArmorItem)) {
+            return false;
+        }
+
+        Entity directEntity = event.getSource().getDirectEntity();
+
+        // Block all projectile (ranged) damage completely
+        if (directEntity instanceof Projectile) {
+            return true; // cancel the event = no damage taken
+        }
+
+        // Reflect 25% of melee damage back to attacker
+        Entity attacker = event.getSource().getEntity();
+        if (attacker != null) {
+            InfinititeArmorItem.handleDamageReflection(entity, attacker, event.getAmount());
+        }
+        return false;
     }
 }
