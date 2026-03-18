@@ -1,8 +1,11 @@
 package com.ghostviper358.toinfinititeandbeyond;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -10,6 +13,8 @@ import net.minecraft.world.entity.projectile.SmallFireball;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -71,32 +76,16 @@ public class InfinititeBootsItem extends Item {
             trackSneak(player, level, id, currentTick);
         }
 
-        // --- VOID STEP: walk on water/lava ---
-        if (player.isInFluidType() && !player.isShiftKeyDown()) {
-            Vec3 motion = player.getDeltaMovement();
-            player.setDeltaMovement(motion.x, 0.05, motion.z);
+        // --- VOID STEP: convert water/lava under feet to obsidian ---
+        BlockPos feetPos = player.blockPosition();
+        BlockPos belowPos = feetPos.below();
+        boolean feetInFluid = !level.getFluidState(feetPos).isEmpty();
+        boolean belowIsFluid = !level.getFluidState(belowPos).isEmpty();
+        if (feetInFluid) {
+            level.setBlock(feetPos, Blocks.OBSIDIAN.defaultBlockState(), 3);
         }
-
-        // --- VOID STEP: void crack trail every 5 ticks ---
-        if (currentTick % 5 == 0) {
-            level.sendParticles(ParticleTypes.SQUID_INK,
-                player.getX(), player.getY() + 0.1, player.getZ(),
-                3, 0.2, 0.05, 0.2, 0.01);
-        }
-
-        // --- VOID STEP: launch nearby mobs every 40 ticks ---
-        if (currentTick % 40 == 0) {
-            AABB box = player.getBoundingBox().inflate(5.0);
-            List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class, box,
-                e -> e != player && e.isAlive());
-            for (LivingEntity mob : nearby) {
-                double dx = mob.getX() - player.getX();
-                double dz = mob.getZ() - player.getZ();
-                double dist = Math.sqrt(dx * dx + dz * dz);
-                if (dist > 0) {
-                    mob.knockback(3.0, -dx / dist, -dz / dist);
-                }
-            }
+        if (belowIsFluid) {
+            level.setBlock(belowPos, Blocks.OBSIDIAN.defaultBlockState(), 3);
         }
 
         // --- COSMIC DASH: burst forward while sprinting every 40 ticks ---
@@ -117,12 +106,13 @@ public class InfinititeBootsItem extends Item {
                 2, 0.15, 0.1, 0.15, 0.01);
         }
 
-        // --- GRAVITY DEFIANCE: hold jump in mid-air ---
-        if (!player.onGround() && player instanceof ServerPlayer serverPlayer
-                && serverPlayer.getLastClientInput().jump()) {
-            Vec3 motion = player.getDeltaMovement();
-            double newY = Math.min(motion.y + 0.15, 0.3);
-            player.setDeltaMovement(motion.x, newY, motion.z);
+        // --- GRAVITY DEFIANCE: hold jump = Levitation effect ---
+        if (player instanceof ServerPlayer serverPlayer) {
+            if (serverPlayer.getLastClientInput().jump()) {
+                player.addEffect(new MobEffectInstance(MobEffects.LEVITATION, 5, 1, false, false, false));
+            } else {
+                player.removeEffect(MobEffects.LEVITATION);
+            }
         }
 
         // --- STAR STOMP: fire 8 SmallFireball at nearest mobs every 600 ticks ---
