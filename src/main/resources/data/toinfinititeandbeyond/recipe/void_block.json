@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "VVV",
+    "VVV",
+    "VVV"
+  ],
+  "key": {
+    "V": "toinfinititeandbeyond:void_ingot"
+  },
+  "result": {
+    "id": "toinfinititeandbeyond:void_block",
+    "count": 1
+  }
+}

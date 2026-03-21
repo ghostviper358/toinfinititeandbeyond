@@ -9,5 +9,7 @@
   "item.toinfinititeandbeyond.infinitite_boots": "Infinitite Boots",
   "item.toinfinititeandbeyond.sapphire": "Sapphire",
   "block.toinfinititeandbeyond.void_ore": "Void Ore",
-  "item.toinfinititeandbeyond.void_ingot": "Void Ingot"
+  "item.toinfinititeandbeyond.void_ingot": "Void Ingot",
+  "block.toinfinititeandbeyond.void_block": "Void Block",
+  "item.toinfinititeandbeyond.void_sword": "Void Sword"
 }

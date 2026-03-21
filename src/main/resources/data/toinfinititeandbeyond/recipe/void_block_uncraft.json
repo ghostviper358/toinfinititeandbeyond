@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "toinfinititeandbeyond:void_block"
+  ],
+  "result": {
+    "id": "toinfinititeandbeyond:void_ingot",
+    "count": 9
+  }
+}

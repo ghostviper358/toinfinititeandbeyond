@@ -75,6 +75,22 @@ public final class ToInfinititeAndBeyond {
         () -> new BlockItem(VOID_ORE.get(), new Item.Properties().setId(ITEMS.key("void_ore")))
     );
 
+    // Creates the Void Block - a compressed block of void energy, crafted from 9 Void Ingots
+    public static final RegistryObject<Block> VOID_BLOCK = BLOCKS.register("void_block",
+        () -> new Block(
+            BlockBehaviour.Properties.of()
+                .setId(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(MOD_ID, "void_block")))
+                .strength(50.0f, 1200.0f)
+                .requiresCorrectToolForDrops()
+                .lightLevel(state -> 3)
+                .sound(net.minecraft.world.level.block.SoundType.NETHERITE_BLOCK)
+        )
+    );
+
+    public static final RegistryObject<Item> VOID_BLOCK_ITEM = ITEMS.register("void_block",
+        () -> new BlockItem(VOID_BLOCK.get(), new Item.Properties().setId(ITEMS.key("void_block")))
+    );
+
     // Creates the Void Ingot - a rare crafting material from Void Ore
     public static final RegistryObject<Item> VOID_INGOT = ITEMS.register("void_ingot",
         () -> new Item(new Item.Properties().setId(ITEMS.key("void_ingot")))
@@ -91,6 +107,26 @@ public final class ToInfinititeAndBeyond {
     public static final RegistryObject<Item> INFINITITE_INGOT = ITEMS.register("infinitite_ingot",
         () -> new Item(new Item.Properties()
             .setId(ITEMS.key("infinitite_ingot"))
+        )
+    );
+
+    // Creates the Void Sword - corrupted blade with wither, soul drain, void pull, darkness, and heart curse
+    public static final RegistryObject<Item> VOID_SWORD = ITEMS.register("void_sword",
+        () -> new VoidSwordItem(new Item.Properties()
+            .setId(ITEMS.key("void_sword"))
+            .durability(2500)
+            .attributes(ItemAttributeModifiers.builder()
+                .add(
+                    Attributes.ATTACK_DAMAGE,
+                    new AttributeModifier(
+                        ResourceLocation.withDefaultNamespace("void_attack_damage"),
+                        8.0, // +8 damage (4 base + 8 = 12 total)
+                        AttributeModifier.Operation.ADD_VALUE
+                    ),
+                    EquipmentSlotGroup.MAINHAND
+                )
+                .build()
+            )
         )
     );
 
@@ -365,8 +401,10 @@ public final class ToInfinititeAndBeyond {
         }
         if (event.getTabKey() == CreativeModeTabs.BUILDING_BLOCKS) {
             event.accept(VOID_ORE_ITEM.get());
+            event.accept(VOID_BLOCK_ITEM.get());
         }
         if (event.getTabKey() == CreativeModeTabs.COMBAT) {
+            event.accept(VOID_SWORD.get());
             event.accept(INFINITITE_SWORD.get());
             event.accept(INFINITITE_BOW.get());
             event.accept(INFINITITE_ARROW_ITEM.get());

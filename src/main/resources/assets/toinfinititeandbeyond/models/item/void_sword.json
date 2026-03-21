@@ -1,0 +1,6 @@
+{
+  "parent": "item/handheld",
+  "textures": {
+    "layer0": "toinfinititeandbeyond:item/void_sword"
+  }
+}
