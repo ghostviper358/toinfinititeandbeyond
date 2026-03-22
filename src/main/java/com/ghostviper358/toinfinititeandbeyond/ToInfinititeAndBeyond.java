@@ -110,6 +110,114 @@ public final class ToInfinititeAndBeyond {
         )
     );
 
+    // Creates the Void Helmet - Night Vision + Void Sight + Wither Aura
+    public static final RegistryObject<Item> VOID_HELMET = ITEMS.register("void_helmet",
+        () -> new VoidHelmetItem(
+            new Item.Properties()
+                .setId(ITEMS.key("void_helmet"))
+                .durability(2000)
+                .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.HEAD)
+                    .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .setAsset(net.minecraft.resources.ResourceKey.create(EquipmentAssets.ROOT_ID,
+                        ResourceLocation.fromNamespaceAndPath(MOD_ID, "void_armor")))
+                    .build()
+                )
+                .attributes(ItemAttributeModifiers.builder()
+                    .add(
+                        Attributes.ARMOR,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("void_helmet_armor"),
+                            5.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.HEAD
+                    )
+                    .add(
+                        Attributes.ARMOR_TOUGHNESS,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("void_helmet_toughness"),
+                            3.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.HEAD
+                    )
+                    .build()
+                )
+        )
+    );
+
+    // Creates the Void Leggings - Void Step + Shadow Trail + Gravity Pull + Phase + Shadow Strike + Void Buffs
+    public static final RegistryObject<Item> VOID_LEGGINGS = ITEMS.register("void_leggings",
+        () -> new VoidLeggingsItem(
+            new Item.Properties()
+                .setId(ITEMS.key("void_leggings"))
+                .durability(2100)
+                .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.LEGS)
+                    .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .setAsset(net.minecraft.resources.ResourceKey.create(EquipmentAssets.ROOT_ID,
+                        ResourceLocation.fromNamespaceAndPath(MOD_ID, "void_armor")))
+                    .build()
+                )
+                .attributes(ItemAttributeModifiers.builder()
+                    .add(
+                        Attributes.ARMOR,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("void_leggings_armor"),
+                            8.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.LEGS
+                    )
+                    .add(
+                        Attributes.ARMOR_TOUGHNESS,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("void_leggings_toughness"),
+                            3.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.LEGS
+                    )
+                    .build()
+                )
+        )
+    );
+
+    // Creates the Void Chestplate - Soul Drain + Void Shield + Wither Burst + Dark Shroud + Armor Shatter + Void Healing
+    public static final RegistryObject<Item> VOID_CHESTPLATE = ITEMS.register("void_chestplate",
+        () -> new VoidChestplateItem(
+            new Item.Properties()
+                .setId(ITEMS.key("void_chestplate"))
+                .durability(2200)
+                .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.CHEST)
+                    .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .setAsset(net.minecraft.resources.ResourceKey.create(EquipmentAssets.ROOT_ID,
+                        ResourceLocation.fromNamespaceAndPath(MOD_ID, "void_armor")))
+                    .build()
+                )
+                .attributes(ItemAttributeModifiers.builder()
+                    .add(
+                        Attributes.ARMOR,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("void_chestplate_armor"),
+                            9.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.CHEST
+                    )
+                    .add(
+                        Attributes.ARMOR_TOUGHNESS,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("void_chestplate_toughness"),
+                            3.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.CHEST
+                    )
+                    .build()
+                )
+        )
+    );
+
     // Creates the Void Sword - corrupted blade with wither, soul drain, void pull, darkness, and heart curse
     public static final RegistryObject<Item> VOID_SWORD = ITEMS.register("void_sword",
         () -> new VoidSwordItem(new Item.Properties()
@@ -404,6 +512,9 @@ public final class ToInfinititeAndBeyond {
             event.accept(VOID_BLOCK_ITEM.get());
         }
         if (event.getTabKey() == CreativeModeTabs.COMBAT) {
+            event.accept(VOID_HELMET.get());
+            event.accept(VOID_CHESTPLATE.get());
+            event.accept(VOID_LEGGINGS.get());
             event.accept(VOID_SWORD.get());
             event.accept(INFINITITE_SWORD.get());
             event.accept(INFINITITE_BOW.get());
@@ -459,28 +570,59 @@ public final class ToInfinititeAndBeyond {
      */
     public static boolean onLivingHurt(LivingHurtEvent event) {
         LivingEntity entity = event.getEntity();
-        // Only apply if wearing the Infinitite Chest Plate
-        if (!(entity.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof InfinititeArmorItem)) {
-            return false;
-        }
-
         Entity directEntity = event.getSource().getDirectEntity();
+        Entity attacker = event.getSource().getEntity();
 
-        // Block all projectile (ranged) damage completely
-        if (directEntity instanceof Projectile) {
-            return true; // cancel the event = no damage taken
+        // --- Void Leggings: Phase dodge + Shadow Strike (when WEARER takes damage) ---
+        if (entity instanceof Player legsPlayer && VoidLeggingsItem.isWearing(legsPlayer)
+                && entity.level() instanceof ServerLevel legsLevel) {
+            boolean isMelee = !(directEntity instanceof net.minecraft.world.entity.projectile.Projectile);
+            if (VoidLeggingsItem.handleLeggingsHurt(legsPlayer, legsLevel, isMelee)) {
+                return true; // Phase dodged the hit
+            }
         }
 
-        // Reflect 25% of melee damage back to attacker (chest plate)
-        Entity attacker = event.getSource().getEntity();
-        if (attacker != null) {
-            InfinititeArmorItem.handleDamageReflection(entity, attacker, event.getAmount());
+        // --- Void Chestplate abilities (when WEARER takes damage) ---
+        if (entity instanceof Player voidPlayer && VoidChestplateItem.isWearing(voidPlayer)
+                && entity.level() instanceof ServerLevel voidLevel) {
+            if (VoidChestplateItem.handleChestplateHurt(event, voidPlayer, voidLevel)) {
+                return true; // Dark Shroud cancelled the hit
+            }
+        }
+
+        // --- Void Chestplate: Armor Shatter (when ATTACKER wears it and hits someone) ---
+        if (attacker instanceof Player chestAttacker && VoidChestplateItem.isWearing(chestAttacker)
+                && entity instanceof LivingEntity livingTarget
+                && entity.level() instanceof ServerLevel shatterLevel) {
+            VoidChestplateItem.handleArmorShatter(chestAttacker, livingTarget, shatterLevel);
+        }
+
+        // --- Infinitite Chestplate abilities ---
+        if (!(entity.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof InfinititeArmorItem)) {
+            // Not wearing Infinitite, skip Infinitite-specific logic but still check other things below
+        } else {
+            // Block all projectile (ranged) damage completely
+            if (directEntity instanceof Projectile) {
+                return true; // cancel the event = no damage taken
+            }
+
+            // Reflect 25% of melee damage back to attacker (chest plate)
+            if (attacker != null) {
+                InfinititeArmorItem.handleDamageReflection(entity, attacker, event.getAmount());
+            }
         }
 
         // COSMIC ECHO (helmet): lightning strikes nearby mobs when player is hit
         if (entity instanceof Player player && InfinititeHelmetItem.isWearing(player)
                 && entity.level() instanceof ServerLevel serverLevel) {
             InfinititeHelmetItem.handleCosmicEcho(player, event.getAmount(), serverLevel);
+        }
+
+        // VOID HELMET HEART DRAIN: every 5 hits player deals, permanently remove 2 hearts
+        if (attacker instanceof Player helmetPlayer && VoidHelmetItem.isWearing(helmetPlayer)
+                && entity instanceof LivingEntity livingTarget2
+                && entity.level() instanceof ServerLevel helmetLevel) {
+            VoidHelmetItem.handleHelmetHitCurse(helmetPlayer, livingTarget2, helmetLevel);
         }
 
         return false;

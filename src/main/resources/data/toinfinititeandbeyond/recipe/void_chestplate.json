@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "combat",
+  "pattern": [
+    "V V",
+    "VVV",
+    "VVV"
+  ],
+  "key": {
+    "V": "toinfinititeandbeyond:void_ingot"
+  },
+  "result": {
+    "id": "toinfinititeandbeyond:void_chestplate",
+    "count": 1
+  }
+}
