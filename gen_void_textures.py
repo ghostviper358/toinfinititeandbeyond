@@ -153,17 +153,17 @@ block_path = os.path.join(
 write_png(block_path, void_block_grid)
 
 # ── Void Sword item texture ───────────────────────────────────────────────────
-# Handheld sword silhouette - black blade with blood-red edge glow, dark handle
+# Handheld sword silhouette - void purple blade matching the armor palette
 
 T   = (  0,   0,   0,   0)   # transparent
-HK  = ( 35,  18,   8, 255)   # dark brown handle
-HK2 = ( 55,  28,  12, 255)   # lighter handle
-GD  = ( 80,  60,  20, 255)   # dark gold guard
-BK  = ( 18,   2,  25, 255)   # void black blade
-BK2 = ( 30,   4,  38, 255)   # blade highlight
-CR  = (160,  15,  25, 255)   # crimson edge
-CRB = (230,  40,  50, 255)   # bright edge glow
-RD  = (255,  70,  30, 255)   # hot tip
+HK  = ( 18,   7,  30, 255)   # dark purple handle (matches armor C2)
+HK2 = ( 35,  12,  55, 255)   # slightly lighter handle (armor C3)
+GD  = ( 65,  22, 100, 255)   # mid purple guard (armor C4)
+BK  = (  8,   3,  12, 255)   # near-black blade body (armor C1)
+BK2 = ( 35,  12,  55, 255)   # dark purple blade (armor C3)
+CR  = (115,  45, 170, 255)   # bright purple edge (armor C5)
+CRB = (160,  85, 220, 255)   # glowing purple edge (armor C6)
+RD  = (200, 130, 255, 255)   # brightest lavender tip (armor C7)
 
 void_sword_grid = [
     [T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   RD,  T,   T ],  # 0  tip
@@ -190,5 +190,42 @@ sword_path = os.path.join(
     "textures", "item", "void_sword.png"
 )
 write_png(sword_path, void_sword_grid)
+
+# ── Void Boots item texture ───────────────────────────────────────────────────
+# Boot silhouette - matching the void armor purple palette exactly
+
+T   = (  0,   0,   0,   0)   # transparent
+D1  = (  8,   3,  12, 255)   # darkest body (matches helmet)
+D2  = ( 18,   7,  30, 255)   # dark body
+D3  = ( 35,  12,  55, 255)   # mid purple shadow
+D4  = ( 65,  22, 100, 255)   # medium purple
+H1  = (160,  85, 220, 255)   # bright purple highlight
+H2  = (200, 130, 255, 255)   # brightest lavender accent
+
+void_boots_grid = [
+    [T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T ],  # 0
+    [T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T ],  # 1
+    [T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T ],  # 2
+    [T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T ],  # 3
+    [T,   T,   H1,  H2,  T,   T,   T,   T,   T,   H1,  H2,  T,   T,   T,   T,   T ],  # 4  ankle opening rim
+    [T,   H1,  D2,  D3,  H1,  T,   T,   T,   H1,  D2,  D3,  H1,  T,   T,   T,   T ],  # 5
+    [T,   D4,  D1,  D4,  D2,  T,   T,   T,   D4,  D1,  D4,  D2,  T,   T,   T,   T ],  # 6
+    [T,   D2,  D3,  D2,  D4,  T,   T,   T,   D2,  D3,  D2,  D4,  T,   T,   T,   T ],  # 7
+    [T,   H1,  D2,  D1,  D2,  D3,  D3,  D2,  D1,  D2,  D1,  H1,  T,   T,   T,   T ],  # 8  upper cuff band
+    [T,   D4,  D3,  D2,  D4,  D1,  D4,  D1,  D2,  D4,  D3,  D4,  T,   T,   T,   T ],  # 9
+    [T,   D2,  D4,  D3,  D1,  D4,  D3,  D4,  D1,  D3,  D4,  D2,  T,   T,   T,   T ],  # 10
+    [T,   H1,  D2,  D1,  D3,  D2,  H1,  D2,  D3,  D1,  D2,  H1,  T,   T,   T,   T ],  # 11 purple accent stripe
+    [T,   D3,  D4,  D2,  D1,  D3,  D4,  D3,  D1,  D2,  D4,  D3,  T,   T,   T,   T ],  # 12
+    [T,   D2,  D3,  D4,  D2,  D1,  D2,  D1,  D2,  D4,  D3,  D2,  T,   T,   T,   T ],  # 13
+    [T,   H2,  H1,  D4,  D3,  D4,  H1,  H1,  D4,  D3,  H1,  H2,  T,   T,   T,   T ],  # 14  sole highlight
+    [T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T,   T ],  # 15
+]
+
+boots_path = os.path.join(
+    os.path.dirname(__file__),
+    "src", "main", "resources", "assets", "toinfinititeandbeyond",
+    "textures", "item", "void_boots.png"
+)
+write_png(boots_path, void_boots_grid)
 
 print("Done!")

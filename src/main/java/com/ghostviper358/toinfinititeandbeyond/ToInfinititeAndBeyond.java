@@ -2,6 +2,7 @@ package com.ghostviper358.toinfinititeandbeyond;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -17,6 +18,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DropExperienceBlock;
@@ -24,6 +26,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
@@ -31,6 +34,7 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
@@ -218,6 +222,28 @@ public final class ToInfinititeAndBeyond {
         )
     );
 
+    // Creates the Void Boots - Feather Fall + Dark Landing + Void Creep + Soul Drain Step + Void Sprint + Void Buffs
+    public static final RegistryObject<Item> VOID_BOOTS = ITEMS.register("void_boots",
+        () -> new VoidBootsItem(
+            new Item.Properties()
+                .setId(ITEMS.key("void_boots"))
+                .durability(1900)
+                .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.FEET)
+                    .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .setAsset(net.minecraft.resources.ResourceKey.create(EquipmentAssets.ROOT_ID,
+                        ResourceLocation.fromNamespaceAndPath(MOD_ID, "void_armor")))
+                    .build()
+                )
+                .attributes(ItemAttributeModifiers.builder()
+                    .add(Attributes.ARMOR, new AttributeModifier(
+                        ResourceLocation.withDefaultNamespace("void_boots_armor"), 4.0, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.FEET)
+                    .add(Attributes.ARMOR_TOUGHNESS, new AttributeModifier(
+                        ResourceLocation.withDefaultNamespace("void_boots_toughness"), 3.0, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.FEET)
+                    .build()
+                )
+        )
+    );
+
     // Creates the Void Sword - corrupted blade with wither, soul drain, void pull, darkness, and heart curse
     public static final RegistryObject<Item> VOID_SWORD = ITEMS.register("void_sword",
         () -> new VoidSwordItem(new Item.Properties()
@@ -280,6 +306,24 @@ public final class ToInfinititeAndBeyond {
             .clientTrackingRange(4)
             .updateInterval(20)
             .build(ENTITY_TYPES.key("infinitite_arrow"))
+    );
+
+    // Register the Infinitite Monstrosity mob entity type
+    // Size 1.5 x 2.9 (pre-scale; the SCALE attribute multiplies it to ~4.5 x 8.7 in-world)
+    public static final RegistryObject<EntityType<InfinititeMonstrosity>> INFINITITE_MONSTROSITY = ENTITY_TYPES.register("infinitite_monstrosity",
+        () -> EntityType.Builder.<InfinititeMonstrosity>of(InfinititeMonstrosity::new, MobCategory.MONSTER)
+            .sized(1.5F, 2.9F)
+            .clientTrackingRange(10)
+            .updateInterval(3)
+            .build(ENTITY_TYPES.key("infinitite_monstrosity"))
+    );
+
+    // Spawn egg for the Infinitite Monstrosity
+    public static final RegistryObject<Item> INFINITITE_MONSTROSITY_SPAWN_EGG = ITEMS.register("infinitite_monstrosity_spawn_egg",
+        () -> new SpawnEggItem(
+            INFINITITE_MONSTROSITY.get(),
+            new Item.Properties().setId(ITEMS.key("infinitite_monstrosity_spawn_egg"))
+        )
     );
 
     // Creates the Infinitite Chest Plate with permanent buffs, damage reflection, and +5 hearts
@@ -491,6 +535,9 @@ public final class ToInfinititeAndBeyond {
         // Register the item to a creative tab
         BuildCreativeModeTabContentsEvent.getBus(modBusGroup).addListener(ToInfinititeAndBeyond::addCreative);
 
+        // Register entity attributes (must happen on the mod event bus)
+        EntityAttributeCreationEvent.getBus(modBusGroup).addListener(ToInfinititeAndBeyond::onEntityAttributeCreation);
+
         // Register game event for Infinitite Chest Plate abilities (ranged immunity + damage reflection)
         // Using Predicate form: returning true cancels the event (blocks the damage)
         LivingHurtEvent.BUS.addListener((java.util.function.Predicate<LivingHurtEvent>) ToInfinititeAndBeyond::onLivingHurt);
@@ -515,6 +562,7 @@ public final class ToInfinititeAndBeyond {
             event.accept(VOID_HELMET.get());
             event.accept(VOID_CHESTPLATE.get());
             event.accept(VOID_LEGGINGS.get());
+            event.accept(VOID_BOOTS.get());
             event.accept(VOID_SWORD.get());
             event.accept(INFINITITE_SWORD.get());
             event.accept(INFINITITE_BOW.get());
@@ -523,11 +571,20 @@ public final class ToInfinititeAndBeyond {
             event.accept(INFINITITE_CHESTPLATE.get());
             event.accept(INFINITITE_LEGGINGS.get());
             event.accept(INFINITITE_BOOTS.get());
+            event.accept(INFINITITE_MONSTROSITY_SPAWN_EGG.get());
         }
     }
 
+    /**
+     * Register entity attribute sets - called once during startup on the mod event bus.
+     * Every custom mob entity needs its attribute map registered here.
+     */
+    public static void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
+        event.put(INFINITITE_MONSTROSITY.get(), InfinititeMonstrosity.createAttributes().build());
+    }
+
     // You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent
-    @Mod.EventBusSubscriber(modid = MOD_ID, value = Dist.CLIENT)
+    @Mod.EventBusSubscriber(modid = MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static class ClientModEvents {
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
@@ -535,14 +592,32 @@ public final class ToInfinititeAndBeyond {
             LOGGER.info("HELLO FROM CLIENT SETUP");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
         }
+
+        @SubscribeEvent
+        public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
+            event.registerEntityRenderer(INFINITITE_MONSTROSITY.get(), InfinititeMonstrosityRenderer::new);
+        }
+
+        @SubscribeEvent
+        public static void onRegisterLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
+            event.registerLayerDefinition(
+                InfinititeMonstrosityRenderer.LAYER_LOCATION,
+                InfinititeMonstrosityModel::createBodyLayer
+            );
+        }
     }
 
     /**
      * ROCKET LEGS: cancel fall damage and trigger landing shockwave.
      */
     public static boolean onLivingFall(LivingFallEvent event) {
-        if (event.getEntity() instanceof Player player && InfinititeLeggingsItem.isWearing(player)) {
-            return InfinititeLeggingsItem.handleLanding(player, event.getDistance());
+        if (event.getEntity() instanceof Player player) {
+            if (VoidBootsItem.isWearing(player)) {
+                return VoidBootsItem.handleBootsFall(player, event.getDistance());
+            }
+            if (InfinititeLeggingsItem.isWearing(player)) {
+                return InfinititeLeggingsItem.handleLanding(player, event.getDistance());
+            }
         }
         return false;
     }

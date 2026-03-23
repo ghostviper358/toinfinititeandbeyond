@@ -11,5 +11,7 @@
   "block.toinfinititeandbeyond.void_ore": "Void Ore",
   "item.toinfinititeandbeyond.void_ingot": "Void Ingot",
   "block.toinfinititeandbeyond.void_block": "Void Block",
-  "item.toinfinititeandbeyond.void_sword": "Void Sword"
+  "item.toinfinititeandbeyond.void_sword": "Void Sword",
+  "entity.toinfinititeandbeyond.infinitite_monstrosity": "Infinitite Monstrosity",
+  "item.toinfinititeandbeyond.infinitite_monstrosity_spawn_egg": "Infinitite Monstrosity Spawn Egg"
 }
