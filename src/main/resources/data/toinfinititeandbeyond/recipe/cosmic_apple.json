@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "toinfinititeandbeyond:universal_shard",
+    "minecraft:apple"
+  ],
+  "result": {
+    "id": "toinfinititeandbeyond:cosmic_apple",
+    "count": 1
+  }
+}

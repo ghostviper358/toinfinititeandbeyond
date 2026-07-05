@@ -15,10 +15,16 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectCategory;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemUseAnimation;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.SpawnEggItem;
+import net.minecraft.world.item.component.Consumable;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DropExperienceBlock;
@@ -35,6 +41,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
@@ -60,6 +67,16 @@ public final class ToInfinititeAndBeyond {
 
     // Create a Deferred Register to hold Entity Types
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, MOD_ID);
+
+    // Create a Deferred Register to hold Mob Effects
+    public static final DeferredRegister<MobEffect> MOB_EFFECTS = DeferredRegister.create(ForgeRegistries.MOB_EFFECTS, MOD_ID);
+
+    // Cosmic Invincibility - custom effect granted by the Cosmic Apple. Complete damage
+    // immunity (not just resistance) is handled in onLivingHurt() below, since there's no
+    // vanilla mob effect that fully zeroes out damage.
+    public static final RegistryObject<MobEffect> COSMIC_INVINCIBILITY = MOB_EFFECTS.register("cosmic_invincibility",
+        () -> new CosmicInvincibilityEffect(MobEffectCategory.BENEFICIAL, 0xB565F5)
+    );
 
     // Creates the Void Ore block - glows at light level 7, drops 3-7 XP, requires correct tool
     public static final RegistryObject<Block> VOID_ORE = BLOCKS.register("void_ore",
@@ -111,6 +128,41 @@ public final class ToInfinititeAndBeyond {
     public static final RegistryObject<Item> INFINITITE_INGOT = ITEMS.register("infinitite_ingot",
         () -> new Item(new Item.Properties()
             .setId(ITEMS.key("infinitite_ingot"))
+        )
+    );
+
+    // Creates the Universal Shard - top-tier legendary material, dropped only by the future
+    // Universe Destroyer boss. Not minable/craftable; this is just the item existing so later
+    // recipes (Cosmic Apple, sword, armor) can reference it. Glows via the foil/glint shimmer.
+    public static final RegistryObject<Item> UNIVERSAL_SHARD = ITEMS.register("universal_shard",
+        () -> new UniversalShardItem(new Item.Properties()
+            .setId(ITEMS.key("universal_shard"))
+            .rarity(Rarity.EPIC)
+        )
+    );
+
+    // Creates the Cosmic Apple - the first item crafted from Universal Shards. An
+    // emergency-use "ultimate" food: temporary speed/strength/regen/fire resistance/
+    // true invincibility/glowing, plus a permanent, uncapped, stacking +30 max health
+    // bonus. Modeled on the vanilla Enchanted Golden Apple's rarity/preciousness, but
+    // capped to a smaller stack size (16, not 64) so it still reads as a rare
+    // emergency item rather than a stackable snack.
+    public static final RegistryObject<Item> COSMIC_APPLE = ITEMS.register("cosmic_apple",
+        () -> new CosmicAppleItem(new Item.Properties()
+            .setId(ITEMS.key("cosmic_apple"))
+            .rarity(Rarity.EPIC)
+            .stacksTo(16)
+            .food(new FoodProperties.Builder()
+                .nutrition(4)
+                .saturationModifier(1.2F)
+                .alwaysEdible()
+                .build()
+            )
+            .component(DataComponents.CONSUMABLE, Consumable.builder()
+                .consumeSeconds(1.6F)
+                .animation(ItemUseAnimation.EAT)
+                .build()
+            )
         )
     );
 
@@ -532,6 +584,9 @@ public final class ToInfinititeAndBeyond {
         // Register the entity types
         ENTITY_TYPES.register(modBusGroup);
 
+        // Register the mob effects (Cosmic Invincibility, etc.)
+        MOB_EFFECTS.register(modBusGroup);
+
         // Register the item to a creative tab
         BuildCreativeModeTabContentsEvent.getBus(modBusGroup).addListener(ToInfinititeAndBeyond::addCreative);
 
@@ -545,6 +600,13 @@ public final class ToInfinititeAndBeyond {
         // Register events for Infinitite Leggings abilities
         LivingFallEvent.BUS.addListener((java.util.function.Predicate<LivingFallEvent>) ToInfinititeAndBeyond::onLivingFall);
         TickEvent.PlayerTickEvent.Post.BUS.addListener(ToInfinititeAndBeyond::onPlayerTick);
+
+        // Cosmic Apple's permanent max-health bonus: a fresh Player entity (created on
+        // respawn, or on login) gets a brand-new AttributeMap that won't remember a
+        // modifier that was only ever added to the old instance, so we re-sync it from
+        // the persistent stack counter in both cases.
+        PlayerEvent.Clone.BUS.addListener(ToInfinititeAndBeyond::onPlayerClone);
+        PlayerEvent.PlayerLoggedInEvent.BUS.addListener(ToInfinititeAndBeyond::onPlayerLoggedIn);
     }
 
     // Add our custom items to creative tabs
@@ -553,6 +615,10 @@ public final class ToInfinititeAndBeyond {
             event.accept(SAPPHIRE.get());
             event.accept(INFINITITE_INGOT.get());
             event.accept(VOID_INGOT.get());
+            event.accept(UNIVERSAL_SHARD.get());
+        }
+        if (event.getTabKey() == CreativeModeTabs.FOOD_AND_DRINKS) {
+            event.accept(COSMIC_APPLE.get());
         }
         if (event.getTabKey() == CreativeModeTabs.BUILDING_BLOCKS) {
             event.accept(VOID_ORE_ITEM.get());
@@ -648,6 +714,13 @@ public final class ToInfinititeAndBeyond {
         Entity directEntity = event.getSource().getDirectEntity();
         Entity attacker = event.getSource().getEntity();
 
+        // --- Cosmic Apple: complete damage immunity while Cosmic Invincibility is active ---
+        // There's no vanilla "true invincibility" effect (Resistance only reduces damage),
+        // so this custom effect is just a marker and this is where it actually does something.
+        if (COSMIC_INVINCIBILITY.getHolder().map(entity::hasEffect).orElse(false)) {
+            return true;
+        }
+
         // --- Void Leggings: Phase dodge + Shadow Strike (when WEARER takes damage) ---
         if (entity instanceof Player legsPlayer && VoidLeggingsItem.isWearing(legsPlayer)
                 && entity.level() instanceof ServerLevel legsLevel) {
@@ -701,5 +774,30 @@ public final class ToInfinititeAndBeyond {
         }
 
         return false;
+    }
+
+    /**
+     * Cosmic Apple's permanent max-health bonus survives death: PlayerEvent.Clone fires
+     * when a player respawns (or changes dimension), handing us the OLD player instance
+     * right before it's discarded and the NEW one takes over. Forge's persistent NBT data
+     * (player.getPersistentData()) is NOT copied to the new instance automatically, so we
+     * copy it manually here - this is the standard Forge idiom for surviving death - and
+     * then re-apply the max-health modifier onto the new instance's (fresh) AttributeMap.
+     */
+    public static void onPlayerClone(PlayerEvent.Clone event) {
+        Player oldPlayer = event.getOriginal();
+        Player newPlayer = event.getEntity();
+
+        newPlayer.getPersistentData().merge(oldPlayer.getPersistentData());
+        CosmicAppleItem.resyncMaxHealthModifier(newPlayer);
+    }
+
+    /**
+     * Defensive re-sync on every login: whether or not vanilla's normal entity NBT
+     * save/load already restored the max-health modifier, recomputing it from the
+     * persistent stack counter is idempotent and guarantees it's always correct.
+     */
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        CosmicAppleItem.resyncMaxHealthModifier(event.getEntity());
     }
 }
