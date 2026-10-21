@@ -13,30 +13,31 @@
       "bones": [
         {
           "name": "root",
-          "pivot": [0, 0, 0],
-          "rotation": [20, 0, -70],
+          "comment": "Laid out like a vanilla sword sprite so item/handheld's hold transforms line up: grip centered where a vanilla sword's handle is (bottom-left of the item, 4.5 units from center - x is positive here because GeckoLib mirrors geo x), blade tilted 45 degrees toward the top-right. The pivot sits on the grip so the tilt keeps the grip in the hand.",
+          "pivot": [4.5, -4.5, 0],
+          "rotation": [0, 0, -45],
           "cubes": [
             {
-              "comment": "pommel - shifted down an additional 5 units (two more increments of the same -2.5 move used to center the grip) since one application wasn't enough to pull it out of the hover",
-              "origin": [-1.5, -9.5, -1.5],
+              "comment": "pommel",
+              "origin": [3, -9, -1.5],
               "size": [3, 2, 3],
               "uv": [0, 0]
             },
             {
               "comment": "grip",
-              "origin": [-1, -7.5, -1],
+              "origin": [3.5, -7, -1],
               "size": [2, 5, 2],
               "uv": [0, 9]
             },
             {
               "comment": "crossguard",
-              "origin": [-4, -2.5, -1],
+              "origin": [0.5, -2, -1],
               "size": [8, 1, 2],
               "uv": [0, 19]
             },
             {
               "comment": "blade",
-              "origin": [-1, -1.5, -0.5],
+              "origin": [3.5, -1, -0.5],
               "size": [2, 16, 1],
               "uv": [0, 25]
             }
