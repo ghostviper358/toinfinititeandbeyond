@@ -34,6 +34,7 @@ import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
@@ -756,6 +757,11 @@ public final class ToInfinititeAndBeyond {
             // Some client setup code
             LOGGER.info("HELLO FROM CLIENT SETUP");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+
+            // Universal Sword attack combo / charge pose: switches off vanilla's swing and turns
+            // the player for the spin move (see UniversalSwordAnimations).
+            RenderPlayerEvent.Pre.BUS.addListener((java.util.function.Consumer<RenderPlayerEvent.Pre>) UniversalSwordAnimations::onRenderPlayerPre);
+            RenderPlayerEvent.Post.BUS.addListener(UniversalSwordAnimations::onRenderPlayerPost);
         }
 
         @SubscribeEvent

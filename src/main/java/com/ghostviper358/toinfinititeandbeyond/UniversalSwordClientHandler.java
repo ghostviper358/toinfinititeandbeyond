@@ -16,7 +16,8 @@ import net.minecraftforge.event.TickEvent;
  * *different*, right-click charge pattern elsewhere in this mod). Only the client knows whether
  * the attack key is physically held down, so this polls
  * Minecraft.getInstance().options.keyAttack every client tick while the local player is holding
- * the Universal Sword in their main hand, and shows the charge-up visuals (growing energy orb +
+ * the Universal Sword in their main hand. Once the key has been held a moment (see
+ * CHARGE_START_DELAY_TICKS) it shows the charge-up visuals (growing energy orb +
  * sword glow) locally. Once the hold reaches UniversalSwordItem.CHARGE_DURATION_TICKS, it sends
  * the network trigger packet to the server exactly once and resets, so the ability actually
  * fires server-side (see UniversalSwordNetworking / UniversalSwordItem.handleShockwaveTrigger).
@@ -47,6 +48,15 @@ public final class UniversalSwordClientHandler {
      */
     private static boolean holding = false;
 
+    /**
+     * How long the attack key has been held down with the sword out. Charging only starts once
+     * it's been held for {@link #CHARGE_START_DELAY_TICKS}, so a normal click plays an attack from
+     * the combo (see UniversalSwordAnimations) instead of flashing the charge pose and storm.
+     */
+    private static int heldTicks = 0;
+
+    private static final int CHARGE_START_DELAY_TICKS = 6; // 0.3 seconds
+
     private UniversalSwordClientHandler() {
     }
 
@@ -54,11 +64,20 @@ public final class UniversalSwordClientHandler {
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
 
-        boolean holdingNow = player != null && minecraft.level != null && isHoldingUniversalSword(player)
-                && minecraft.options.keyAttack.isDown();
+        if (player == null || minecraft.level == null) {
+            heldTicks = 0;
+            holding = false;
+            UniversalSwordAnimations.clearAll();
+            return;
+        }
+
+        boolean keyHeld = isHoldingUniversalSword(player) && minecraft.options.keyAttack.isDown();
+        heldTicks = keyHeld ? heldTicks + 1 : 0;
+        boolean holdingNow = heldTicks >= CHARGE_START_DELAY_TICKS;
 
         if (holdingNow != holding) {
             holding = holdingNow;
+            UniversalSwordAnimations.setCharging(player.getId(), holding);
             if (holding) {
                 UniversalSwordNetworking.sendStartChargeToServer();
             } else {

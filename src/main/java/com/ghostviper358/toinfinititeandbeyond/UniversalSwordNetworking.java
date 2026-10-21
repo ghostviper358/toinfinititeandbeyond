@@ -13,11 +13,11 @@ import net.minecraftforge.network.SimpleChannel;
  *
  * Why this exists: whether the attack key is currently held down is client-only information
  * (there's no vanilla server-side "is this key down" concept), so the client has to track the
- * charge itself and then tell the server once the charge is complete. This is the only packet
- * needed - it carries no data, it's purely a "the charge finished, fire the shockwave now"
+ * charge itself and then tell the server once the charge is complete. That trigger packet
+ * carries no data - it's purely a "the charge finished, fire the shockwave now"
  * signal. Everything the ability actually does (the five rings, weather, instant-kills, player
- * floating) happens entirely server-side once this packet is received, so nothing needs to be
- * sent back down to clients.
+ * floating) happens entirely server-side once this packet is received. The one thing sent back
+ * down is {@link ChargeStatePacket}, so other players can see someone's charge-up pose.
  *
  * This project had no networking/packet infrastructure before this feature (no SimpleChannel,
  * PayloadRegistrar, etc. existed anywhere else in the codebase). Forge 58.1.0 (this project's
@@ -70,6 +70,16 @@ public final class UniversalSwordNetworking {
                 }
             })
             .add();
+
+        CHANNEL.messageBuilder(ChargeStatePacket.class, NetworkDirection.PLAY_TO_CLIENT)
+            .encoder((packet, buf) -> {
+                buf.writeVarInt(packet.entityId());
+                buf.writeBoolean(packet.charging());
+            })
+            .decoder(buf -> new ChargeStatePacket(buf.readVarInt(), buf.readBoolean()))
+            .consumerMainThread((packet, context) ->
+                UniversalSwordAnimations.setCharging(packet.entityId(), packet.charging()))
+            .add();
     }
 
     /** Client -> server: sent once, when the charge-up completes, to fire the shockwave. */
@@ -84,6 +94,14 @@ public final class UniversalSwordNetworking {
     public static final class StopChargePacket {
     }
 
+    /**
+     * Server -> nearby clients: a player started or stopped charging, so everyone around them
+     * sees the sword-raised-overhead pose (see UniversalSwordAnimations). The charging player's
+     * own client already knows, so it's left out.
+     */
+    public record ChargeStatePacket(int entityId, boolean charging) {
+    }
+
     /** Convenience for the client charge handler. */
     public static void sendTriggerToServer() {
         CHANNEL.send(new TriggerShockwavePacket(), PacketDistributor.SERVER.noArg());
@@ -95,5 +113,9 @@ public final class UniversalSwordNetworking {
 
     public static void sendStopChargeToServer() {
         CHANNEL.send(new StopChargePacket(), PacketDistributor.SERVER.noArg());
+    }
+
+    public static void sendChargeStateToTrackers(ServerPlayer player, boolean charging) {
+        CHANNEL.send(new ChargeStatePacket(player.getId(), charging), PacketDistributor.TRACKING_ENTITY.with(player));
     }
 }

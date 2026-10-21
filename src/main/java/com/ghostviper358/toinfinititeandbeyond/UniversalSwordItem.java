@@ -19,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 
 import software.bernie.geckolib.animatable.GeoItem;
 import software.bernie.geckolib.animatable.client.GeoRenderProvider;
@@ -192,22 +193,37 @@ public class UniversalSwordItem extends Item implements GeoItem {
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        // No animations registered yet - this is step 1 of the GeckoLib build-out, just proving
-        // a real 3D model renders in-hand. The overhead charge pose and attack swings (see
-        // docs/requirements/universal_sword_shockwave.md, "Part 1: The Animation") get wired up
-        // here in later steps.
+        // No GeckoLib animation controllers: the attack combo and overhead charge pose move the
+        // player's arm (not bones inside the sword model), so they're done procedurally in
+        // UniversalSwordAnimations instead.
     }
 
     @Override
     public void createGeoRenderer(Consumer<GeoRenderProvider> consumer) {
         consumer.accept(new GeoRenderProvider() {
-            private final GeoItemRenderer<UniversalSwordItem> renderer = new GeoItemRenderer<>(new UniversalSwordModel());
+            private final GeoItemRenderer<UniversalSwordItem> renderer = new UniversalSwordRenderer();
 
             @Override
             public GeoItemRenderer<?> getGeoItemRenderer() {
                 return renderer;
             }
         });
+    }
+
+    @Override
+    public void initializeClient(Consumer<IClientItemExtensions> consumer) {
+        // Custom third-person arm poses and first-person swings - see UniversalSwordAnimations.
+        consumer.accept(UniversalSwordAnimations.CLIENT_EXTENSIONS);
+    }
+
+    @Override
+    public boolean onEntitySwing(ItemStack stack, LivingEntity entity) {
+        // Fires on each client for every player who swings this sword (vanilla already sends
+        // swings to everyone nearby), so each swing plays the next move of the attack combo.
+        if (entity.level().isClientSide()) {
+            UniversalSwordAnimations.onSwing(entity);
+        }
+        return false;
     }
 
     @Override
@@ -334,6 +350,7 @@ public class UniversalSwordItem extends Item implements GeoItem {
             return;
         }
         ACTIVE_CHARGERS.put(player, LIGHTNING_MIN_COOLDOWN_TICKS + RANDOM.nextInt(LIGHTNING_COOLDOWN_JITTER_TICKS));
+        UniversalSwordNetworking.sendChargeStateToTrackers(player, true);
         if (player.level() instanceof ServerLevel level) {
             level.setWeatherParameters(0, CHARGE_STORM_SAFETY_DURATION_TICKS, true, true);
         }
@@ -345,7 +362,9 @@ public class UniversalSwordItem extends Item implements GeoItem {
      * unless someone else in the same level is still charging.
      */
     public static void handleStopCharge(ServerPlayer player) {
-        ACTIVE_CHARGERS.remove(player);
+        if (ACTIVE_CHARGERS.remove(player) != null) {
+            UniversalSwordNetworking.sendChargeStateToTrackers(player, false);
+        }
         if (player.level() instanceof ServerLevel level && !anyoneStillChargingIn(level)) {
             level.setWeatherParameters(CLEAR_WEATHER_DURATION_TICKS, 0, false, false);
         }
@@ -378,6 +397,7 @@ public class UniversalSwordItem extends Item implements GeoItem {
             if (!player.isAlive() || !(player.getMainHandItem().getItem() instanceof UniversalSwordItem)
                     || !(player.level() instanceof ServerLevel level)) {
                 iterator.remove();
+                UniversalSwordNetworking.sendChargeStateToTrackers(player, false);
                 continue;
             }
 
