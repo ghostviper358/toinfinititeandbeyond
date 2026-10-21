@@ -126,6 +126,20 @@ repositories {
             includeGroupAndSubgroups('org.spongepowered')
         }
     }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'GeckoLib'
+                url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+            }
+        }
+        filter {
+            // GeckoLib's own docs say the group is "com.geckolib", but the artifacts are
+            // actually still published under the legacy "software.bernie.geckolib" group
+            // (verified against Cloudsmith's package API directly).
+            includeGroupAndSubgroups('software.bernie.geckolib')
+        }
+    }
 
     // If you have mod jar dependencies in ./libs, you can declare them as a repository like so.
     // See https://docs.gradle.org/current/userguide/declaring_repositories.html#sub:flat_dir_resolver
@@ -146,6 +160,12 @@ dependencies {
     // to improve performance in production environments. This line is required to enable said compile-time validation
     // in your development environment, helping you catch issues early.
     annotationProcessor 'net.minecraftforge:eventbus-validator:7.0-beta.10'
+
+    // GeckoLib - 3D model/animation library for the Universal Sword's overhead charge pose and
+    // attack swing animations (see UniversalSwordItem). Published pre-built against official
+    // Mojang mappings for 1.21.8 (same as this whole project - see "reobf = false" above), so a
+    // plain dependency works; fg.deobf() is only needed for mod jars still shipped in SRG names.
+    implementation "software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}"
 
     // JUnit 5 (Jupiter) for unit testing
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
@@ -183,6 +203,7 @@ tasks.named('processResources', ProcessResources) {
             loader_version_range: loader_version_range,
             mod_id: mod_id, mod_name: mod_name, mod_license: mod_license, mod_version: mod_version,
             mod_authors: mod_authors, mod_description: mod_description,
+            geckolib_version: geckolib_version,
     ]
     inputs.properties replaceProperties
 

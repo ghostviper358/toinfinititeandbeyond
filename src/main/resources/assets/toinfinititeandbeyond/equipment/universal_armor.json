@@ -1,0 +1,14 @@
+{
+  "layers": {
+    "humanoid": [
+      {
+        "texture": "toinfinititeandbeyond:universal_armor"
+      }
+    ],
+    "humanoid_leggings": [
+      {
+        "texture": "toinfinititeandbeyond:universal_armor"
+      }
+    ]
+  }
+}

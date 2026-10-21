@@ -30,11 +30,12 @@ import net.minecraft.world.phys.Vec3;
  * 13. Purple Trail - Leaves purple particles
  * 14. Glowing - Glows purple in flight
  * 15. Lightning Strike - Summons lightning on every hit
+ * 16. ban - bans player on hit
  */
 public class InfinititeArrowEntity extends Arrow {
 
     private LivingEntity lockedTarget;
-    private static final double HOMING_STRENGTH = 0.15; // Stronger homing for Infinitite Arrows
+    private static final double HOMING_STRENGTH = 10.15; // Stronger homing for Infinitite Arrows
     private boolean isInfinititeArrow = false; // Track if this is an Infinitite Arrow
 
     public InfinititeArrowEntity(EntityType<? extends Arrow> entityType, Level level) {

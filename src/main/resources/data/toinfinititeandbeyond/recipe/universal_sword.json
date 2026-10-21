@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "combat",
+  "pattern": [
+    "S",
+    "S",
+    "I"
+  ],
+  "key": {
+    "S": "toinfinititeandbeyond:universal_shard",
+    "I": "minecraft:stick"
+  },
+  "result": {
+    "id": "toinfinititeandbeyond:universal_sword",
+    "count": 1
+  }
+}

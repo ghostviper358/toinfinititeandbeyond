@@ -24,12 +24,12 @@ public class InfinititeSwordItem extends Item {
     @Override
     public void hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         // Apply BLINDNESS effect for 60 ticks (3 seconds) at level 0 (Blindness I)
-        target.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 60, 0));
+        target.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 60, 100));
 
         // Apply POISON effect for 60 ticks (3 seconds) at level 0 (Poison I)
-        target.addEffect(new MobEffectInstance(MobEffects.POISON, 60, 0));
+        target.addEffect(new MobEffectInstance(MobEffects.POISON, 60, 100));
 
-        // Call parent to handle normal behavior (durability damage, stats, etc.)
+        // Call parent to handle normal behavior (durability damag e, stats, etc.)
         super.hurtEnemy(stack, target, attacker);
     }
 }

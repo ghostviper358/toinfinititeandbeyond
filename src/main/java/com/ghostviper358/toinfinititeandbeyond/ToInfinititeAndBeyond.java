@@ -29,6 +29,7 @@ import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DropExperienceBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.util.Unit;
 import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraftforge.api.distmarker.Dist;
@@ -336,6 +337,33 @@ public final class ToInfinititeAndBeyond {
         )
     );
 
+    // Creates the Universal Sword - the mod's ultimate weapon, crafted from Universal
+    // Shards. 999 attack damage (4 base + 995 bonus, matching the Void/Infinitite
+    // swords' "base + bonus" convention) and truly unbreakable via the vanilla
+    // minecraft:unbreakable data component (Unit.INSTANCE is the marker value for that
+    // component type - see DataComponents.UNBREAKABLE) rather than a durability number,
+    // so no .durability(...) call is needed at all: ItemStack.isDamageableItem() and
+    // hurtAndBreak() both already special-case this component to skip damage entirely.
+    public static final RegistryObject<Item> UNIVERSAL_SWORD = ITEMS.register("universal_sword",
+        () -> new UniversalSwordItem(new Item.Properties()
+            .setId(ITEMS.key("universal_sword"))
+            .rarity(Rarity.EPIC)
+            .component(DataComponents.UNBREAKABLE, Unit.INSTANCE)
+            .attributes(ItemAttributeModifiers.builder()
+                .add(
+                    Attributes.ATTACK_DAMAGE,
+                    new AttributeModifier(
+                        ResourceLocation.withDefaultNamespace("universal_attack_damage"),
+                        995.0, // +995 damage (4 base + 995 = 999 total)
+                        AttributeModifier.Operation.ADD_VALUE
+                    ),
+                    EquipmentSlotGroup.MAINHAND
+                )
+                .build()
+            )
+        )
+    );
+
     // Creates the Infinitite Bow with lock-on targeting
     public static final RegistryObject<Item> INFINITITE_BOW = ITEMS.register("infinitite_bow",
         () -> new InfinititeBowItem(new Item.Properties()
@@ -567,6 +595,67 @@ public final class ToInfinititeAndBeyond {
         )
     );
 
+    // Creates the Universal Chestplate - the first piece of the Universal armor set, crafted
+    // from Universal Shards. Matches the Universal Sword's "absurdly overpowered on purpose"
+    // scale (see docs/requirements/universal_chestplate.md): 999 armor (mirroring the sword's
+    // 999 attack damage), 6 toughness, +40 max health while worn, 40% knockback resistance,
+    // and truly unbreakable via the same minecraft:unbreakable data component used by
+    // UNIVERSAL_SWORD (Unit.INSTANCE - see the comment on UNIVERSAL_SWORD above) rather than
+    // a .durability() call.
+    public static final RegistryObject<Item> UNIVERSAL_CHESTPLATE = ITEMS.register("universal_chestplate",
+        () -> new UniversalChestplateItem(
+            new Item.Properties()
+                .setId(ITEMS.key("universal_chestplate"))
+                .rarity(Rarity.EPIC)
+                .component(DataComponents.UNBREAKABLE, Unit.INSTANCE)
+                .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.CHEST)
+                    .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .setAsset(net.minecraft.resources.ResourceKey.create(EquipmentAssets.ROOT_ID,
+                        ResourceLocation.fromNamespaceAndPath(MOD_ID, "universal_armor")))
+                    .build()
+                )
+                .attributes(ItemAttributeModifiers.builder()
+                    .add(
+                        Attributes.ARMOR,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_chestplate_armor"),
+                            999.0, // the set's signature over-the-top number, matching the sword's 999 damage
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.CHEST
+                    )
+                    .add(
+                        Attributes.ARMOR_TOUGHNESS,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_chestplate_toughness"),
+                            6.0, // Void chestplate: 3, Infinitite chestplate: 5 - clearly on top
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.CHEST
+                    )
+                    .add(
+                        Attributes.MAX_HEALTH,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_chestplate_health_boost"),
+                            40.0, // +40 health (20 hearts) while worn - Infinitite chestplate: +10
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.CHEST
+                    )
+                    .add(
+                        Attributes.KNOCKBACK_RESISTANCE,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_chestplate_knockback_resistance"),
+                            0.40, // 40% knockback resistance - Infinitite chestplate: 20%
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.CHEST
+                    )
+                    .build()
+                )
+        )
+    );
+
     // Helper method to create ResourceLocation
     public static ResourceLocation resourceLocation(String path) {
         return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
@@ -601,6 +690,14 @@ public final class ToInfinititeAndBeyond {
         LivingFallEvent.BUS.addListener((java.util.function.Predicate<LivingFallEvent>) ToInfinititeAndBeyond::onLivingFall);
         TickEvent.PlayerTickEvent.Post.BUS.addListener(ToInfinititeAndBeyond::onPlayerTick);
 
+        // Universal Sword shockwave ultimate: networking (client -> server "charge complete"
+        // packet - see UniversalSwordNetworking), a once-per-server-tick hook to advance any
+        // in-flight shockwave rings, and a client-only hook to track the held attack key (only
+        // the client knows whether that key is currently down).
+        UniversalSwordNetworking.register();
+        TickEvent.ServerTickEvent.Post.BUS.addListener(ToInfinititeAndBeyond::onServerTick);
+        TickEvent.ClientTickEvent.Post.BUS.addListener(UniversalSwordClientHandler::onClientTick);
+
         // Cosmic Apple's permanent max-health bonus: a fresh Player entity (created on
         // respawn, or on login) gets a brand-new AttributeMap that won't remember a
         // modifier that was only ever added to the old instance, so we re-sync it from
@@ -631,12 +728,14 @@ public final class ToInfinititeAndBeyond {
             event.accept(VOID_BOOTS.get());
             event.accept(VOID_SWORD.get());
             event.accept(INFINITITE_SWORD.get());
+            event.accept(UNIVERSAL_SWORD.get());
             event.accept(INFINITITE_BOW.get());
             event.accept(INFINITITE_ARROW_ITEM.get());
             event.accept(INFINITITE_HELMET.get());
             event.accept(INFINITITE_CHESTPLATE.get());
             event.accept(INFINITITE_LEGGINGS.get());
             event.accept(INFINITITE_BOOTS.get());
+            event.accept(UNIVERSAL_CHESTPLATE.get());
             event.accept(INFINITITE_MONSTROSITY_SPAWN_EGG.get());
         }
     }
@@ -695,10 +794,25 @@ public final class ToInfinititeAndBeyond {
         Player player = event.player;
         if (!player.level().isClientSide()) {
             InfinititeLeggingsItem.handleGravitySlam(player);
+            // Universal Sword shockwave: enforce any active "floating, no control" lock from
+            // being caught in the blast (see UniversalSwordItem.applyFloatLock/tickFloatLock).
+            UniversalSwordItem.tickFloatLock(player);
         }
         if (!player.level().isClientSide() && player.level() instanceof ServerLevel serverLevel) {
             InfinititeBootsItem.tick(player, serverLevel);
+            // Universal Chestplate: Cosmic Aegis (status immunity + passive regen) + Starlight Aura (particles)
+            UniversalChestplateItem.tick(player, serverLevel);
         }
+    }
+
+    /**
+     * Advances any in-flight Universal Sword shockwaves by one tick. Fires exactly once per
+     * server tick (unlike PlayerTickEvent, which fires once per player per tick), which is what
+     * the ring-expansion timing in UniversalSwordItem.ShockwaveState assumes.
+     */
+    public static void onServerTick(TickEvent.ServerTickEvent.Post event) {
+        UniversalSwordItem.tickActiveShockwaves();
+        UniversalSwordItem.tickActiveChargers();
     }
 
     /**
@@ -719,6 +833,15 @@ public final class ToInfinititeAndBeyond {
         // so this custom effect is just a marker and this is where it actually does something.
         if (COSMIC_INVINCIBILITY.getHolder().map(entity::hasEffect).orElse(false)) {
             return true;
+        }
+
+        // --- Universal Chestplate: Cosmic Ward (25% full block, any damage type) + Cosmic
+        // Rebuke (always blocks ranged, reflects 50% of melee back) - when WEARER takes damage ---
+        if (entity instanceof Player universalPlayer && UniversalChestplateItem.isWearing(universalPlayer)
+                && entity.level() instanceof ServerLevel universalLevel) {
+            if (UniversalChestplateItem.handleChestplateHurt(event, universalPlayer, universalLevel, attacker)) {
+                return true; // Cosmic Ward or Cosmic Rebuke fully blocked the hit
+            }
         }
 
         // --- Void Leggings: Phase dodge + Shadow Strike (when WEARER takes damage) ---

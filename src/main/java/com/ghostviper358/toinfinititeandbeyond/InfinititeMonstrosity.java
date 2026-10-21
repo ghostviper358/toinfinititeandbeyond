@@ -50,14 +50,14 @@ public class InfinititeMonstrosity extends Monster {
     // ---------------------------------------------------------------------------
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-            .add(Attributes.MAX_HEALTH, 300.0)          // 150 hearts
-            .add(Attributes.ATTACK_DAMAGE, 20.0)        // 10 hearts per hit
-            .add(Attributes.MOVEMENT_SPEED, 0.22)       // slower than zombies (0.23)
+            .add(Attributes.MAX_HEALTH, 1000.0)          // 150 hearts
+            .add(Attributes.ATTACK_DAMAGE, 30.0)        // 10 hearts per hit
+            .add(Attributes.MOVEMENT_SPEED, 3.22)       // slower than zombies (0.23)
             .add(Attributes.FOLLOW_RANGE, 64.0)         // sees players from far
-            .add(Attributes.KNOCKBACK_RESISTANCE, 1.0)  // immune to knockback
-            .add(Attributes.ARMOR, 10.0)                // heavily armoured
-            .add(Attributes.ARMOR_TOUGHNESS, 8.0)
-            .add(Attributes.SCALE, 3.0);                // 3x physical size
+            .add(Attributes.KNOCKBACK_RESISTANCE, 100.0)  // immune to knockback
+            .add(Attributes.ARMOR, 30.0)                // heavily armoured
+            .add(Attributes.ARMOR_TOUGHNESS, 10.0)
+            .add(Attributes.SCALE, 5.0);                // 3x physical size
     }
 
     // ---------------------------------------------------------------------------

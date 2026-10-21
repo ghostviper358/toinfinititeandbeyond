@@ -42,16 +42,16 @@ public class InfinititeArmorItem extends Item {
      */
     private void applyPermanentEffects(Player player) {
         // Regeneration II - heal over time
-        addEffectIfNeeded(player, MobEffects.REGENERATION, 1);
+        addEffectIfNeeded(player, MobEffects.REGENERATION, 6);
 
-        // Resistance 5 - reduce damage
-        addEffectIfNeeded(player, MobEffects.RESISTANCE, 5);
+        // Resistance 10 - reduce damage
+        addEffectIfNeeded(player, MobEffects.RESISTANCE, 9);
 
         // Speed II - move faster
-        addEffectIfNeeded(player, MobEffects.SPEED, 3);
+        addEffectIfNeeded(player, MobEffects.SPEED, 10);
 
         // Strength II - hit harder
-        addEffectIfNeeded(player, MobEffects.STRENGTH, 2);
+        addEffectIfNeeded(player, MobEffects.STRENGTH, 7);
     }
 
     /**
