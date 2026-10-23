@@ -34,7 +34,9 @@ import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.event.RenderBlockScreenEffectEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
@@ -43,7 +45,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
@@ -83,6 +88,11 @@ public final class ToInfinititeAndBeyond {
     // vanilla mob effect that fully zeroes out damage.
     public static final RegistryObject<MobEffect> COSMIC_INVINCIBILITY = MOB_EFFECTS.register("cosmic_invincibility",
         () -> new CosmicInvincibilityEffect(MobEffectCategory.BENEFICIAL, 0xB565F5)
+    );
+
+    // Universal God - the permanent mark of a player who ate a Universal Core (see UniversalGodEffect).
+    public static final RegistryObject<MobEffect> UNIVERSAL_GOD = MOB_EFFECTS.register("universal_god",
+        () -> new UniversalGodEffect(MobEffectCategory.BENEFICIAL, 0xFFD24A)
     );
 
     // Creates the Void Ore block - glows at light level 7, drops 3-7 XP, requires correct tool
@@ -167,6 +177,28 @@ public final class ToInfinititeAndBeyond {
             )
             .component(DataComponents.CONSUMABLE, Consumable.builder()
                 .consumeSeconds(1.6F)
+                .animation(ItemUseAnimation.EAT)
+                .build()
+            )
+        )
+    );
+
+    // Creates the Universal Core - eat it to become a Universal God, forever (see
+    // UniversalCoreItem and docs/requirements/universal_core.md). A 3D End Crystal-style GeckoLib
+    // model. Only one per stack - nobody needs more than one.
+    public static final RegistryObject<Item> UNIVERSAL_CORE = ITEMS.register("universal_core",
+        () -> new UniversalCoreItem(new Item.Properties()
+            .setId(ITEMS.key("universal_core"))
+            .rarity(Rarity.EPIC)
+            .stacksTo(1)
+            .food(new FoodProperties.Builder()
+                .nutrition(20)
+                .saturationModifier(1.0F)
+                .alwaysEdible()
+                .build()
+            )
+            .component(DataComponents.CONSUMABLE, Consumable.builder()
+                .consumeSeconds(3.0F) // long enough to watch the rings wind up
                 .animation(ItemUseAnimation.EAT)
                 .build()
             )
@@ -903,6 +935,13 @@ public final class ToInfinititeAndBeyond {
         EntityJoinLevelEvent.BUS.addListener((java.util.function.Consumer<EntityJoinLevelEvent>) UniversalHelmetItem::onEntityJoin);
         ServerStoppingEvent.BUS.addListener(event -> UniversalHelmetItem.endAllTimeStops());
 
+        // Universal Core: god-power key packets, true invincibility (nothing but another god can
+        // hurt or kill a god), and noclip while flying - see UniversalCoreItem.
+        UniversalCoreNetworking.register();
+        LivingAttackEvent.BUS.addListener((java.util.function.Predicate<LivingAttackEvent>) UniversalCoreItem::onLivingAttack);
+        LivingDeathEvent.BUS.addListener((java.util.function.Predicate<LivingDeathEvent>) UniversalCoreItem::onLivingDeath);
+        LivingEvent.LivingTickEvent.BUS.addListener((java.util.function.Consumer<LivingEvent.LivingTickEvent>) UniversalCoreItem::onLivingTick);
+
         // Cosmic Apple's permanent max-health bonus: a fresh Player entity (created on
         // respawn, or on login) gets a brand-new AttributeMap that won't remember a
         // modifier that was only ever added to the old instance, so we re-sync it from
@@ -944,6 +983,7 @@ public final class ToInfinititeAndBeyond {
             event.accept(UNIVERSAL_LEGGINGS.get());
             event.accept(UNIVERSAL_BOOTS.get());
             event.accept(UNIVERSAL_HELMET.get());
+            event.accept(UNIVERSAL_CORE.get());
             event.accept(INFINITITE_MONSTROSITY_SPAWN_EGG.get());
         }
     }
@@ -974,11 +1014,22 @@ public final class ToInfinititeAndBeyond {
 
             // Universal Helmet: Eye Beam / Time Stop key presses.
             TickEvent.ClientTickEvent.Post.BUS.addListener(UniversalHelmetClientHandler::onClientTick);
+
+            // Universal Core: god-power keys, and no block overlay while flying through walls.
+            TickEvent.ClientTickEvent.Post.BUS.addListener(UniversalCoreClientHandler::onClientTick);
+            RenderBlockScreenEffectEvent.BUS.addListener((java.util.function.Predicate<RenderBlockScreenEffectEvent>) UniversalCoreClientHandler::onBlockScreenEffect);
+        }
+
+        @SubscribeEvent
+        public static void onAddGuiOverlayLayers(AddGuiOverlayLayersEvent event) {
+            // Universal Core: a god's hearts are gold and white.
+            UniversalGodHearts.onAddLayers(event);
         }
 
         @SubscribeEvent
         public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
             UniversalHelmetClientHandler.onRegisterKeyMappings(event);
+            UniversalCoreClientHandler.onRegisterKeyMappings(event);
         }
 
         @SubscribeEvent
@@ -1031,6 +1082,8 @@ public final class ToInfinititeAndBeyond {
             UniversalBootsItem.tick(player, serverLevel);
             // Universal Helmet: Mind Control
             UniversalHelmetItem.tick(player, serverLevel);
+            // Universal Core: keeps a god's status, flight, food and god-form look going
+            UniversalCoreItem.tick(player, serverLevel);
         }
         if (player.level().isClientSide() && player.isLocalPlayer()) {
             // Universal Boots: Liquid Walking has to happen on the wearer's own client, since
@@ -1049,6 +1102,7 @@ public final class ToInfinititeAndBeyond {
         UniversalSwordItem.tickActiveChargers();
         UniversalSwordItem.tickActiveSpins();
         UniversalHelmetItem.tickTimeStops();
+        UniversalCoreItem.tickPowers();
     }
 
     /**

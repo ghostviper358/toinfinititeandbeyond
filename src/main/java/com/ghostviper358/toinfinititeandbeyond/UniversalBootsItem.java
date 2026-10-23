@@ -129,7 +129,8 @@ public class UniversalBootsItem extends Item {
 
     /**
      * Cosmic Flight: lets the wearer fly while the boots are on, and takes it away again when
-     * they come off - but only if the boots were what gave it (never from a creative player).
+     * they come off - but only if the boots were what gave it (never from a creative player or a
+     * Universal God, who can always fly).
      * Remembered in the player's saved data, so it's still taken away after a restart.
      */
     private static void updateFlight(Player player) {
@@ -144,7 +145,7 @@ public class UniversalBootsItem extends Item {
             data.putBoolean(FLIGHT_GRANTED_KEY, true);
         } else if (!wearing && granted) {
             data.remove(FLIGHT_GRANTED_KEY);
-            if (!player.isCreative() && !player.isSpectator()) {
+            if (!player.isCreative() && !player.isSpectator() && !UniversalCoreItem.isGod(player)) {
                 abilities.mayfly = false;
                 abilities.flying = false;
                 player.onUpdateAbilities();

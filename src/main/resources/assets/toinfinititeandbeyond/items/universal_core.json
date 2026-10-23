@@ -1,0 +1,9 @@
+{
+  "model": {
+    "type": "minecraft:special",
+    "base": "toinfinititeandbeyond:item/universal_core",
+    "model": {
+      "type": "geckolib:geckolib"
+    }
+  }
+}
