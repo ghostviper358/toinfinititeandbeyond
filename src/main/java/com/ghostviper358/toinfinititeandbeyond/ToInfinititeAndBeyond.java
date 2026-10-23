@@ -726,6 +726,64 @@ public final class ToInfinititeAndBeyond {
         )
     );
 
+    // Creates the Universal Boots - the third piece of the Universal armor set (see
+    // docs/requirements/universal_boots.md). Same 999 armor / 6 toughness / 40% knockback
+    // resistance / +40 max health / unbreakable stats as the chestplate and leggings, each
+    // piece's extra hearts stacking. The abilities live in UniversalBootsItem.
+    public static final RegistryObject<Item> UNIVERSAL_BOOTS = ITEMS.register("universal_boots",
+        () -> new UniversalBootsItem(
+            new Item.Properties()
+                .setId(ITEMS.key("universal_boots"))
+                .rarity(Rarity.EPIC)
+                .component(DataComponents.UNBREAKABLE, Unit.INSTANCE)
+                .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.FEET)
+                    .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .setAsset(net.minecraft.resources.ResourceKey.create(EquipmentAssets.ROOT_ID,
+                        ResourceLocation.fromNamespaceAndPath(MOD_ID, "universal_armor")))
+                    .build()
+                )
+                .attributes(ItemAttributeModifiers.builder()
+                    .add(
+                        Attributes.ARMOR,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_boots_armor"),
+                            999.0, // the set's signature over-the-top number
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.FEET
+                    )
+                    .add(
+                        Attributes.ARMOR_TOUGHNESS,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_boots_toughness"),
+                            6.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.FEET
+                    )
+                    .add(
+                        Attributes.MAX_HEALTH,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_boots_health_boost"),
+                            40.0, // +40 health (20 hearts) while worn, stacking with the other pieces
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.FEET
+                    )
+                    .add(
+                        Attributes.KNOCKBACK_RESISTANCE,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_boots_knockback_resistance"),
+                            0.40,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.FEET
+                    )
+                    .build()
+                )
+        )
+    );
+
     // Helper method to create ResourceLocation
     public static ResourceLocation resourceLocation(String path) {
         return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
@@ -812,6 +870,7 @@ public final class ToInfinititeAndBeyond {
             event.accept(INFINITITE_BOOTS.get());
             event.accept(UNIVERSAL_CHESTPLATE.get());
             event.accept(UNIVERSAL_LEGGINGS.get());
+            event.accept(UNIVERSAL_BOOTS.get());
             event.accept(INFINITITE_MONSTROSITY_SPAWN_EGG.get());
         }
     }
@@ -887,6 +946,13 @@ public final class ToInfinititeAndBeyond {
             UniversalChestplateItem.tick(player, serverLevel);
             // Universal Leggings: every good effect, Star Speed trail, Star Jump refills
             UniversalLeggingsItem.tick(player, serverLevel);
+            // Universal Boots: Cosmic Flight, Meteor Slam, Supernova Trail, no fall damage
+            UniversalBootsItem.tick(player, serverLevel);
+        }
+        if (player.level().isClientSide() && player.isLocalPlayer()) {
+            // Universal Boots: Liquid Walking has to happen on the wearer's own client, since
+            // that's where a player's movement is decided.
+            UniversalBootsItem.tickLiquidWalking(player);
         }
     }
 
