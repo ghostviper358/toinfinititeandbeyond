@@ -658,6 +658,74 @@ public final class ToInfinititeAndBeyond {
         )
     );
 
+    // Creates the Universal Leggings - the second piece of the Universal armor set (see
+    // docs/requirements/universal_leggings.md). Same 999 armor / 6 toughness / 40% knockback
+    // resistance / unbreakable stats as UNIVERSAL_CHESTPLATE, another +40 max health (20 hearts)
+    // that stacks on top of the chestplate's, and Star Speed's +50% movement speed. The
+    // abilities live in UniversalLeggingsItem.
+    public static final RegistryObject<Item> UNIVERSAL_LEGGINGS = ITEMS.register("universal_leggings",
+        () -> new UniversalLeggingsItem(
+            new Item.Properties()
+                .setId(ITEMS.key("universal_leggings"))
+                .rarity(Rarity.EPIC)
+                .component(DataComponents.UNBREAKABLE, Unit.INSTANCE)
+                .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.LEGS)
+                    .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .setAsset(net.minecraft.resources.ResourceKey.create(EquipmentAssets.ROOT_ID,
+                        ResourceLocation.fromNamespaceAndPath(MOD_ID, "universal_armor")))
+                    .build()
+                )
+                .attributes(ItemAttributeModifiers.builder()
+                    .add(
+                        Attributes.ARMOR,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_leggings_armor"),
+                            999.0, // the set's signature over-the-top number
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.LEGS
+                    )
+                    .add(
+                        Attributes.ARMOR_TOUGHNESS,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_leggings_toughness"),
+                            6.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.LEGS
+                    )
+                    .add(
+                        Attributes.MAX_HEALTH,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_leggings_health_boost"),
+                            40.0, // +40 health (20 hearts) while worn, on top of the chestplate's 20
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.LEGS
+                    )
+                    .add(
+                        Attributes.KNOCKBACK_RESISTANCE,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_leggings_knockback_resistance"),
+                            0.40,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.LEGS
+                    )
+                    .add(
+                        Attributes.MOVEMENT_SPEED,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_leggings_star_speed"),
+                            0.50, // Star Speed: +50% running speed, on top of the Speed effect
+                            AttributeModifier.Operation.ADD_MULTIPLIED_BASE
+                        ),
+                        EquipmentSlotGroup.LEGS
+                    )
+                    .build()
+                )
+        )
+    );
+
     // Helper method to create ResourceLocation
     public static ResourceLocation resourceLocation(String path) {
         return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
@@ -700,6 +768,11 @@ public final class ToInfinititeAndBeyond {
         TickEvent.ServerTickEvent.Post.BUS.addListener(ToInfinititeAndBeyond::onServerTick);
         TickEvent.ClientTickEvent.Post.BUS.addListener(UniversalSwordClientHandler::onClientTick);
 
+        // Universal Leggings: Warp Dash (double-tap sneak) and Star Jumps (mid-air jumps) are
+        // spotted client-side and sent to the server - see UniversalLeggingsNetworking.
+        UniversalLeggingsNetworking.register();
+        TickEvent.ClientTickEvent.Post.BUS.addListener(UniversalLeggingsClientHandler::onClientTick);
+
         // Cosmic Apple's permanent max-health bonus: a fresh Player entity (created on
         // respawn, or on login) gets a brand-new AttributeMap that won't remember a
         // modifier that was only ever added to the old instance, so we re-sync it from
@@ -738,6 +811,7 @@ public final class ToInfinititeAndBeyond {
             event.accept(INFINITITE_LEGGINGS.get());
             event.accept(INFINITITE_BOOTS.get());
             event.accept(UNIVERSAL_CHESTPLATE.get());
+            event.accept(UNIVERSAL_LEGGINGS.get());
             event.accept(INFINITITE_MONSTROSITY_SPAWN_EGG.get());
         }
     }
@@ -811,6 +885,8 @@ public final class ToInfinititeAndBeyond {
             InfinititeBootsItem.tick(player, serverLevel);
             // Universal Chestplate: Cosmic Aegis (status immunity + passive regen) + Starlight Aura (particles)
             UniversalChestplateItem.tick(player, serverLevel);
+            // Universal Leggings: every good effect, Star Speed trail, Star Jump refills
+            UniversalLeggingsItem.tick(player, serverLevel);
         }
     }
 
@@ -851,6 +927,15 @@ public final class ToInfinititeAndBeyond {
                 && entity.level() instanceof ServerLevel universalLevel) {
             if (UniversalChestplateItem.handleChestplateHurt(event, universalPlayer, universalLevel, attacker)) {
                 return true; // Cosmic Ward or Cosmic Rebuke fully blocked the hit
+            }
+        }
+
+        // --- Universal Leggings: Cosmic Phase (30% chance to dodge any attack from a mob or player) ---
+        if (entity instanceof Player phasePlayer && UniversalLeggingsItem.isWearing(phasePlayer)
+                && entity.level() instanceof ServerLevel phaseLevel) {
+            LivingEntity phaseAttacker = attacker instanceof LivingEntity living ? living : null;
+            if (UniversalLeggingsItem.handleLeggingsHurt(phasePlayer, phaseLevel, phaseAttacker)) {
+                return true; // phased out and dodged the attack
             }
         }
 
