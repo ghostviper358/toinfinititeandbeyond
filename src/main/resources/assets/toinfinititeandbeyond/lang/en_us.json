@@ -30,5 +30,8 @@
   "block.toinfinititeandbeyond.void_block": "Void Block",
   "item.toinfinititeandbeyond.void_sword": "Void Sword",
   "entity.toinfinititeandbeyond.infinitite_monstrosity": "Infinitite Monstrosity",
+  "entity.toinfinititeandbeyond.infinitite_monstrosity.enraged": "Infinitite Monstrosity - Enraged",
+  "entity.toinfinititeandbeyond.monstrosity_rock": "Monstrosity Rock",
+  "item.toinfinititeandbeyond.monstrosity_heart": "Monstrosity Heart",
   "item.toinfinititeandbeyond.infinitite_monstrosity_spawn_egg": "Infinitite Monstrosity Spawn Egg"
 }

@@ -34,6 +34,7 @@ import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.RenderBlockScreenEffectEvent;
@@ -430,10 +431,31 @@ public final class ToInfinititeAndBeyond {
     // Size 1.5 x 2.9 (pre-scale; the SCALE attribute multiplies it to ~4.5 x 8.7 in-world)
     public static final RegistryObject<EntityType<InfinititeMonstrosity>> INFINITITE_MONSTROSITY = ENTITY_TYPES.register("infinitite_monstrosity",
         () -> EntityType.Builder.<InfinititeMonstrosity>of(InfinititeMonstrosity::new, MobCategory.MONSTER)
-            .sized(1.5F, 2.9F)
+            // Short and wide to match the hunched golem with its long arms (11 x 10 blocks once
+            // its 5x SCALE is applied), so its arms, legs and head can all be hit.
+            .sized(2.2F, 2.0F)
             .clientTrackingRange(10)
             .updateInterval(3)
             .build(ENTITY_TYPES.key("infinitite_monstrosity"))
+    );
+
+    // The chunks of rock the Infinitite Monstrosity hurls in its Rock Barrage (drawn as big
+    // blocks of crying obsidian - see onRegisterRenderers).
+    public static final RegistryObject<EntityType<MonstrosityRockEntity>> MONSTROSITY_ROCK = ENTITY_TYPES.register("monstrosity_rock",
+        () -> EntityType.Builder.<MonstrosityRockEntity>of(MonstrosityRockEntity::new, MobCategory.MISC)
+            .sized(1.0F, 1.0F)
+            .clientTrackingRange(8)
+            .updateInterval(10)
+            .build(ENTITY_TYPES.key("monstrosity_rock"))
+    );
+
+    // Monstrosity Heart - the trophy the Infinitite Monstrosity drops
+    public static final RegistryObject<Item> MONSTROSITY_HEART = ITEMS.register("monstrosity_heart",
+        () -> new MonstrosityHeartItem(new Item.Properties()
+            .setId(ITEMS.key("monstrosity_heart"))
+            .rarity(Rarity.EPIC)
+            .stacksTo(16)
+        )
     );
 
     // Spawn egg for the Infinitite Monstrosity
@@ -985,6 +1007,7 @@ public final class ToInfinititeAndBeyond {
             event.accept(UNIVERSAL_HELMET.get());
             event.accept(UNIVERSAL_CORE.get());
             event.accept(INFINITITE_MONSTROSITY_SPAWN_EGG.get());
+            event.accept(MONSTROSITY_HEART.get());
         }
     }
 
@@ -1024,6 +1047,8 @@ public final class ToInfinititeAndBeyond {
         public static void onAddGuiOverlayLayers(AddGuiOverlayLayersEvent event) {
             // Universal Core: a god's hearts are gold and white.
             UniversalGodHearts.onAddLayers(event);
+            // Infinitite Monstrosity: its custom boss bar.
+            MonstrosityBossBar.onAddLayers(event);
         }
 
         @SubscribeEvent
@@ -1035,6 +1060,8 @@ public final class ToInfinititeAndBeyond {
         @SubscribeEvent
         public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
             event.registerEntityRenderer(INFINITITE_MONSTROSITY.get(), InfinititeMonstrosityRenderer::new);
+            // Rocks are drawn 3x as big as a block item, and always bright (they're glowing hot).
+            event.registerEntityRenderer(MONSTROSITY_ROCK.get(), context -> new ThrownItemRenderer<>(context, 3.0f, true));
         }
 
         @SubscribeEvent

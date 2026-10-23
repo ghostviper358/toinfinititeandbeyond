@@ -8,175 +8,207 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
-import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.util.Mth;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
- * 3-D model for the Infinitite Monstrosity.
+ * 3D model for the Infinitite Monstrosity: a hunched golem of dark rock - a huge chest, a small
+ * head sunk low between massive boulder shoulders, long gorilla arms ending in boulder fists, short
+ * thick legs, and purple Infinitite crystals growing out of its back. Its right fist grips the
+ * giant void sword, which points forward at rest.
  *
- * Texture sheet: 128 x 128 pixels.
+ * Texture sheet: 128 x 128 (painted by gen_infinitite_monstrosity_texture.py - the cube list
+ * there must match this one). Actual in-world size comes from the entity's SCALE attribute (5x).
  *
- * Body layout (humanoid proportions; actual in-world size is set by
- * the SCALE attribute = 3.0 on the entity):
- *   head      - 8x8x8 cube
- *   body      - 8x12x4 torso
- *   rightArm  - 4x12x4 arm  (+ giant void sword as child parts)
- *   leftArm   - 4x12x4 arm
- *   rightLeg  - 4x12x4 leg
- *   leftLeg   - 4x12x4 leg
- *
- * Sword parts (children of rightArm, UV area starting at u=48):
- *   swordHandle    texOffs(48,32) box(-1,-2,-1, 2,6,2)
- *   swordGuard     texOffs(48,40) box(-3,-3,-1, 6,2,2)
- *   swordBladeLow  texOffs(48,44) box(-1,-10,-1, 2,8,2)
- *   swordBladeHigh texOffs(48,54) box(-1,-18,-1, 2,8,2)
- *   swordTip       texOffs(52,44) box(-0.5,-22,-0.5, 1,4,1)
- *
- * The arm pivot is at (x=±5, y=2) relative to the body origin.
- * Arm geometry starts at y=-2 and runs to y=10 (relative to arm pivot).
- * "Fist" = y=10. Sword parts are offset downward beyond y=10 so the
- * blade extends below the fist.
+ * Part tree (so the arms and head move with the hunched chest):
+ *   waist
+ *     chest (tilted forward)
+ *       head (+ brow), crystal1-3, rightArm (+ sword), leftArm
+ *   rightLeg, leftLeg
  */
 @OnlyIn(Dist.CLIENT)
-public class InfinititeMonstrosityModel extends EntityModel<LivingEntityRenderState> {
+public class InfinititeMonstrosityModel extends EntityModel<InfinititeMonstrosityRenderState> {
 
-    // Top-level body parts
+    private static final float HUNCH = 0.35f;
+    private static final float ARM_REST = -0.15f;
+
+    private final ModelPart waist;
+    private final ModelPart chest;
     private final ModelPart head;
-    private final ModelPart body;
     private final ModelPart rightArm;
     private final ModelPart leftArm;
+    private final ModelPart sword;
     private final ModelPart rightLeg;
     private final ModelPart leftLeg;
 
     public InfinititeMonstrosityModel(ModelPart root) {
         super(root);
-        this.head     = root.getChild("head");
-        this.body     = root.getChild("body");
-        this.rightArm = root.getChild("rightArm");
-        this.leftArm  = root.getChild("leftArm");
+        this.waist = root.getChild("waist");
+        this.chest = waist.getChild("chest");
+        this.head = chest.getChild("head");
+        this.rightArm = chest.getChild("rightArm");
+        this.leftArm = chest.getChild("leftArm");
+        this.sword = rightArm.getChild("sword");
         this.rightLeg = root.getChild("rightLeg");
-        this.leftLeg  = root.getChild("leftLeg");
+        this.leftLeg = root.getChild("leftLeg");
     }
 
-    /**
-     * Called once during Forge model layer registration (client-side).
-     * Defines every cube, its UV offset, and its starting pose.
-     */
+    /** Called once during Forge model layer registration (client-side). */
     public static LayerDefinition createBodyLayer() {
         MeshDefinition mesh = new MeshDefinition();
         PartDefinition root = mesh.getRoot();
+        CubeDeformation none = CubeDeformation.NONE;
 
-        // ---- HEAD ------------------------------------------------------------
-        root.addOrReplaceChild("head",
+        PartDefinition waist = root.addOrReplaceChild("waist",
+            CubeListBuilder.create().texOffs(0, 26).addBox(-7.0f, -6.0f, -5.0f, 14, 8, 10, none),
+            PartPose.offset(0.0f, 12.0f, 0.0f));
+
+        PartDefinition chest = waist.addOrReplaceChild("chest",
+            CubeListBuilder.create().texOffs(0, 0).addBox(-10.0f, -14.0f, -7.0f, 20, 14, 12, none),
+            PartPose.offsetAndRotation(0.0f, -5.0f, 0.0f, HUNCH, 0.0f, 0.0f));
+
+        chest.addOrReplaceChild("head",
             CubeListBuilder.create()
-                .texOffs(0, 0)
-                .addBox(-4.0f, -8.0f, -4.0f, 8, 8, 8, CubeDeformation.NONE),
-            PartPose.offset(0.0f, 0.0f, 0.0f));
+                .texOffs(64, 0).addBox(-4.0f, -4.0f, -8.0f, 8, 8, 8, none)
+                .texOffs(22, 86).addBox(-5.0f, -5.0f, -9.0f, 10, 3, 3, none)  // heavy brow
+                .texOffs(48, 86).addBox(-4.0f, 3.0f, -9.0f, 8, 3, 5, none),   // jutting jaw, glowing teeth
+            PartPose.offset(0.0f, -9.0f, -6.0f));
 
-        // ---- BODY ------------------------------------------------------------
-        root.addOrReplaceChild("body",
+        // Infinitite crystals jutting out of its back.
+        chest.addOrReplaceChild("crystal1",
+            CubeListBuilder.create().texOffs(104, 44).addBox(-1.5f, -7.0f, -1.5f, 3, 7, 3, none),
+            PartPose.offsetAndRotation(-4.0f, -12.0f, 3.0f, -0.5f, 0.0f, -0.4f));
+        chest.addOrReplaceChild("crystal2",
+            CubeListBuilder.create().texOffs(104, 54).addBox(-1.5f, -7.0f, -1.5f, 3, 7, 3, none),
+            PartPose.offsetAndRotation(3.0f, -13.0f, 2.0f, -0.7f, 0.0f, 0.3f));
+        chest.addOrReplaceChild("crystal3",
+            CubeListBuilder.create().texOffs(116, 44).addBox(-1.5f, -7.0f, -1.5f, 3, 7, 3, none),
+            PartPose.offsetAndRotation(0.0f, -6.0f, 4.0f, -1.1f, 0.0f, 0.1f));
+
+        PartDefinition rightArm = chest.addOrReplaceChild("rightArm",
             CubeListBuilder.create()
-                .texOffs(16, 16)
-                .addBox(-4.0f, 0.0f, -2.0f, 8, 12, 4, CubeDeformation.NONE),
-            PartPose.offset(0.0f, 0.0f, 0.0f));
+                .texOffs(48, 26).addBox(-7.0f, -5.0f, -5.0f, 10, 8, 10, none)  // boulder shoulder
+                .texOffs(0, 44).addBox(-5.0f, 1.0f, -4.0f, 8, 14, 8, none)     // arm
+                .texOffs(64, 44).addBox(-6.0f, 15.0f, -5.0f, 10, 10, 10, none), // boulder fist
+            PartPose.offsetAndRotation(-12.0f, -11.0f, 0.0f, ARM_REST, 0.0f, 0.0f));
 
-        // ---- RIGHT ARM + SWORD CHILDREN -------------------------------------
-        PartDefinition rightArm = root.addOrReplaceChild("rightArm",
+        // The void sword, gripped in the right fist. Built pointing up, then turned to point forward.
+        rightArm.addOrReplaceChild("sword",
             CubeListBuilder.create()
-                .texOffs(40, 16)
-                .addBox(-3.0f, -2.0f, -2.0f, 4, 12, 4, CubeDeformation.NONE),
-            PartPose.offset(-5.0f, 2.0f, 0.0f));
+                .texOffs(104, 66).addBox(-1.0f, -2.0f, -1.0f, 2, 8, 2, none)     // handle
+                .texOffs(0, 86).addBox(-4.0f, -4.0f, -1.5f, 8, 2, 3, none)       // guard
+                .texOffs(120, 64).addBox(-1.5f, -34.0f, -0.5f, 3, 30, 1, none)   // blade
+                .texOffs(104, 76).addBox(-0.5f, -38.0f, -0.5f, 1, 4, 1, none),   // tip
+            PartPose.offsetAndRotation(-1.0f, 20.0f, 0.0f, Mth.HALF_PI, 0.0f, 0.0f));
 
-        // Sword parts are positioned relative to the rightArm pivot.
-        // The arm occupies y=-2 to y=10. The hand is at y=10.
-        // All sword parts are offset further down (y > 10) to extend below the fist.
-
-        // Handle: occupies the fist and just below it
-        rightArm.addOrReplaceChild("swordHandle",
+        chest.addOrReplaceChild("leftArm",
             CubeListBuilder.create()
-                .texOffs(48, 32)
-                .addBox(-1.0f, -2.0f, -1.0f, 2, 6, 2, CubeDeformation.NONE),
-            PartPose.offset(0.0f, 14.0f, 0.0f));
+                .texOffs(88, 26).addBox(-3.0f, -5.0f, -5.0f, 10, 8, 10, none)
+                .texOffs(32, 44).addBox(-3.0f, 1.0f, -4.0f, 8, 14, 8, none)
+                .texOffs(0, 66).addBox(-4.0f, 15.0f, -5.0f, 10, 10, 10, none),
+            PartPose.offsetAndRotation(12.0f, -11.0f, 0.0f, ARM_REST, 0.0f, 0.0f));
 
-        // Guard: wider cross-piece just below the bottom of the handle
-        rightArm.addOrReplaceChild("swordGuard",
-            CubeListBuilder.create()
-                .texOffs(48, 40)
-                .addBox(-3.0f, -3.0f, -1.0f, 6, 2, 2, CubeDeformation.NONE),
-            PartPose.offset(0.0f, 18.0f, 0.0f));
-
-        // Lower blade: long segment below the guard
-        rightArm.addOrReplaceChild("swordBladeLow",
-            CubeListBuilder.create()
-                .texOffs(48, 44)
-                .addBox(-1.0f, -10.0f, -1.0f, 2, 8, 2, CubeDeformation.NONE),
-            PartPose.offset(0.0f, 28.0f, 0.0f));
-
-        // Upper blade: second segment continuing upward from the lower blade
-        rightArm.addOrReplaceChild("swordBladeHigh",
-            CubeListBuilder.create()
-                .texOffs(48, 54)
-                .addBox(-1.0f, -18.0f, -1.0f, 2, 8, 2, CubeDeformation.NONE),
-            PartPose.offset(0.0f, 28.0f, 0.0f));
-
-        // Tip: narrow tapered point at the very bottom
-        rightArm.addOrReplaceChild("swordTip",
-            CubeListBuilder.create()
-                .texOffs(52, 44)
-                .addBox(-0.5f, -22.0f, -0.5f, 1, 4, 1, CubeDeformation.NONE),
-            PartPose.offset(0.0f, 28.0f, 0.0f));
-
-        // ---- LEFT ARM --------------------------------------------------------
-        root.addOrReplaceChild("leftArm",
-            CubeListBuilder.create()
-                .texOffs(40, 16)
-                .addBox(-1.0f, -2.0f, -2.0f, 4, 12, 4, CubeDeformation.NONE),
-            PartPose.offset(5.0f, 2.0f, 0.0f));
-
-        // ---- RIGHT LEG -------------------------------------------------------
         root.addOrReplaceChild("rightLeg",
-            CubeListBuilder.create()
-                .texOffs(0, 16)
-                .addBox(-2.0f, 0.0f, -2.0f, 4, 12, 4, CubeDeformation.NONE),
-            PartPose.offset(-1.9f, 12.0f, 0.0f));
-
-        // ---- LEFT LEG --------------------------------------------------------
+            CubeListBuilder.create().texOffs(40, 66).addBox(-4.0f, 0.0f, -4.0f, 8, 11, 8, none),
+            PartPose.offset(-4.5f, 13.0f, 0.0f));
         root.addOrReplaceChild("leftLeg",
-            CubeListBuilder.create()
-                .texOffs(0, 16)
-                .addBox(-2.0f, 0.0f, -2.0f, 4, 12, 4, CubeDeformation.NONE),
-            PartPose.offset(1.9f, 12.0f, 0.0f));
+            CubeListBuilder.create().texOffs(72, 66).addBox(-4.0f, 0.0f, -4.0f, 8, 11, 8, none),
+            PartPose.offset(4.5f, 13.0f, 0.0f));
 
         return LayerDefinition.create(mesh, 128, 128);
     }
 
-    // ---------------------------------------------------------------------------
-    // Animation - called every frame with the current render state
-    // ---------------------------------------------------------------------------
-
     @Override
-    public void setupAnim(LivingEntityRenderState renderState) {
-        super.setupAnim(renderState);
+    public void setupAnim(InfinititeMonstrosityRenderState state) {
+        super.setupAnim(state); // back to the resting pose built above
 
-        // Walk animation uses the render state's walkAnimationPos / walkAnimationSpeed fields
-        float limbSwing  = renderState.walkAnimationPos;
-        float limbAmount = renderState.walkAnimationSpeed;
+        float walk = state.walkAnimationPos * 0.6662f;
+        float stride = state.walkAnimationSpeed;
 
-        // Head tracking
-        this.head.yRot = renderState.yRot * ((float) Math.PI / 180.0f);
-        this.head.xRot = renderState.xRot * ((float) Math.PI / 180.0f);
+        // Heavy, stomping steps, with the arms swinging the opposite way like a gorilla's.
+        rightLeg.xRot = Mth.cos(walk) * 1.0f * stride;
+        leftLeg.xRot = Mth.cos(walk + Mth.PI) * 1.0f * stride;
+        rightArm.xRot += Mth.cos(walk + Mth.PI) * 0.5f * stride;
+        leftArm.xRot += Mth.cos(walk) * 0.5f * stride;
+        waist.yRot = Mth.cos(walk) * 0.08f * stride;
 
-        // Leg swing
-        this.rightLeg.xRot =  (float) Math.cos(limbSwing * 0.6662f)           * 1.4f * limbAmount;
-        this.leftLeg.xRot  =  (float) Math.cos(limbSwing * 0.6662f + Math.PI) * 1.4f * limbAmount;
+        // Slow, heaving breaths.
+        chest.xRot += Mth.sin(state.ageInTicks * 0.06f) * 0.03f;
 
-        // Arm swing (opposite phase to legs)
-        this.rightArm.xRot =  (float) Math.cos(limbSwing * 0.6662f + Math.PI) * 1.4f * limbAmount;
-        this.leftArm.xRot  =  (float) Math.cos(limbSwing * 0.6662f)           * 1.4f * limbAmount;
+        // Look at what it's after (the head can only turn so far, sunk between its shoulders).
+        head.yRot = Mth.clamp(state.yRot, -45.0f, 45.0f) * Mth.DEG_TO_RAD;
+        head.xRot = Mth.clamp(state.xRot, -25.0f, 25.0f) * Mth.DEG_TO_RAD - HUNCH;
 
-        // Sword arm slight outward tilt for a menacing look
-        this.rightArm.zRot = -0.1f;
-        this.leftArm.zRot  =  0.1f;
+        // An ordinary sword swing: an overhead chop with the sword arm.
+        if (state.attackTime > 0.0f) {
+            float swing = Mth.sin(state.attackTime * Mth.PI);
+            rightArm.xRot -= swing * 2.2f;
+            chest.yRot -= swing * 0.3f;
+        }
+
+        poseSpecialAttack(state);
+    }
+
+    /** Poses for the special attacks, driven by how many ticks into the attack it is. */
+    private void poseSpecialAttack(InfinititeMonstrosityRenderState state) {
+        float t = state.attackTicks;
+        switch (state.attack) {
+            case GROUND_SLAM -> {
+                // Both arms up high, then smashed down at tick 15.
+                float arms = t < 15 ? Mth.lerp(ease(t / 15.0f), ARM_REST, -2.6f)
+                    : t < 19 ? Mth.lerp((t - 15) / 4.0f, -2.6f, 0.3f)
+                    : Mth.lerp(ease(Mth.clamp((t - 19) / 11.0f, 0.0f, 1.0f)), 0.3f, ARM_REST);
+                rightArm.xRot = arms;
+                leftArm.xRot = arms;
+                chest.xRot += t >= 15 && t < 22 ? 0.3f : 0.0f;
+            }
+            case ROCK_BARRAGE -> {
+                // The left arm winds back and hurls, three times (throws at ticks 15, 27, 39).
+                float cycle = ((t - 3.0f) % 12.0f + 12.0f) % 12.0f / 12.0f;
+                leftArm.xRot = cycle < 0.8f ? Mth.lerp(ease(cycle / 0.8f), ARM_REST, -2.8f)
+                    : Mth.lerp((cycle - 0.8f) / 0.2f, -2.8f, 0.4f);
+                leftArm.zRot = -0.3f;
+                chest.yRot = 0.25f;
+            }
+            case FIST_QUAKE -> {
+                // Both fists raised together over its head, then pounded into the ground and held.
+                float arms = t < 15 ? Mth.lerp(ease(t / 15.0f), ARM_REST, -2.9f)
+                    : t < 18 ? Mth.lerp((t - 15) / 3.0f, -2.9f, 0.5f)
+                    : 0.5f;
+                rightArm.xRot = arms;
+                leftArm.xRot = arms;
+                rightArm.zRot = t >= 15 ? 0.25f : 0.0f;
+                leftArm.zRot = t >= 15 ? -0.25f : 0.0f;
+                chest.xRot += t >= 15 ? 0.35f : 0.0f;
+            }
+            case VOID_BEAM -> {
+                // Arms flung wide and chest thrown open toward the target.
+                float open = ease(Mth.clamp(t / 20.0f, 0.0f, 1.0f));
+                rightArm.zRot = 1.2f * open;
+                leftArm.zRot = -1.2f * open;
+                rightArm.xRot = Mth.lerp(open, ARM_REST, -0.6f);
+                leftArm.xRot = Mth.lerp(open, ARM_REST, -0.6f);
+                chest.xRot -= 0.5f * open;
+                if (t >= 30) {
+                    chest.xRot += Mth.sin(state.ageInTicks * 1.5f) * 0.02f; // straining with the beam
+                }
+            }
+            case BLACK_HOLE -> {
+                // Sword raised high, then stabbed down into the ground at tick 20 and held there.
+                float arm = t < 20 ? Mth.lerp(ease(t / 20.0f), ARM_REST, -2.4f)
+                    : t < 23 ? Mth.lerp((t - 20) / 3.0f, -2.4f, 0.9f)
+                    : 0.9f;
+                rightArm.xRot = arm;
+                leftArm.xRot = arm * 0.8f; // both hands on the hilt
+                leftArm.yRot = 0.5f;
+                chest.xRot += t >= 20 ? 0.25f : 0.0f;
+            }
+            default -> { }
+        }
+    }
+
+    private static float ease(float t) {
+        return t * t * (3.0f - 2.0f * t);
     }
 }
