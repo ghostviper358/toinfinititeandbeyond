@@ -1,6 +1,6 @@
 """
-Generate the Universal Sword's 3D GeckoLib model texture as an animated 32x(48*8) PNG
-frame-strip (8 frames of 32x48, stacked top-to-bottom) plus its .png.mcmeta.
+Generate the Universal Sword's 3D GeckoLib model texture as an animated 32x(48*16) PNG
+frame-strip (16 frames of 32x48, stacked top-to-bottom) plus its .png.mcmeta.
 Uses only stdlib (struct + zlib) - no Pillow required, same approach as the other
 gen_*_texture.py scripts in this repo.
 
@@ -18,10 +18,10 @@ the 6 faces separately), which is simpler and still reads well since the swirl
 pattern is organic rather than a realistic photo-texture - any face-boundary seams
 just read as part of the swirl.
 """
-import zlib, struct, os, math
+import zlib, struct, os, math, json
 
-FRAMES = 1
-FRAMETIME = 4
+FRAMES = 16
+FRAMETIME = 2
 TEX_W = 32
 TEX_H = 48
 
@@ -149,8 +149,14 @@ out_path = os.path.join(
 )
 write_png(out_path, TEX_W, TEX_H * FRAMES, all_rows)
 
-# Static texture for now (FRAMES=1) - GeckoLib's handling of vanilla .mcmeta frame-strip
-# animation on non-atlas 3D model textures turned out to glitch in practice, so no
-# .mcmeta is written here. A moving texture on the 3D model needs a different technique
-# (e.g. a scrolling-UV render layer) - see docs/requirements follow-up.
+# The frame size must be spelled out: without "width"/"height", Minecraft assumes square
+# frames (32x32 here), which slices this 32x48 frame-strip up wrong and scrambles every
+# frame - the glitch an earlier attempt at animating this texture ran into. No
+# interpolation: 16 frames at 2 ticks each is already smooth, and it keeps GeckoLib on its
+# simplest frame-swapping path.
+meta_path = out_path + ".mcmeta"
+with open(meta_path, "w") as f:
+    json.dump({"animation": {"frametime": FRAMETIME, "width": TEX_W, "height": TEX_H}}, f, indent=2)
+    f.write("\n")
+print(f"Written: {meta_path}")
 print("Done!")

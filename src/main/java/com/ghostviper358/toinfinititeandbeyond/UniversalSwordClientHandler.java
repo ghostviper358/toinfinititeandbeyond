@@ -3,6 +3,8 @@ package com.ghostviper358.toinfinititeandbeyond;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
@@ -71,6 +73,10 @@ public final class UniversalSwordClientHandler {
             return;
         }
 
+        for (Player nearby : minecraft.level.players()) {
+            spawnEnchantLetters(minecraft, nearby);
+        }
+
         boolean keyHeld = isHoldingUniversalSword(player) && minecraft.options.keyAttack.isDown();
         heldTicks = keyHeld ? heldTicks + 1 : 0;
         boolean holdingNow = heldTicks >= CHARGE_START_DELAY_TICKS;
@@ -101,6 +107,53 @@ public final class UniversalSwordClientHandler {
 
     private static boolean isHoldingUniversalSword(Player player) {
         return player.getMainHandItem().is(ToInfinititeAndBeyond.UNIVERSAL_SWORD.get());
+    }
+
+    /** Floating enchanting-table letters drifting into the sword - a trickle normally, a stream while charging. */
+    private static final float LETTERS_PER_TICK = 0.6f;
+    private static final int LETTERS_PER_TICK_CHARGING = 5;
+
+    /**
+     * Enchanting-table letters (the same glyphs that float from bookshelves into an enchanting
+     * table) drifting into the Universal Sword of any player holding it, the local player
+     * included. The vanilla ENCHANT particle flies from (position + velocity) toward position, so
+     * each letter is spawned at the sword and given an offset out to where it should start.
+     * While charging, many more stream in to the sword raised overhead.
+     */
+    private static void spawnEnchantLetters(Minecraft minecraft, Player player) {
+        if (!isHoldingUniversalSword(player) || player.isInvisible()) {
+            return;
+        }
+        var random = player.getRandom();
+        boolean charging = UniversalSwordAnimations.chargeGlow(player, 0.0f) > 0.0f;
+
+        Vec3 sword;
+        if (charging) {
+            sword = player.position().add(0.0, player.getBbHeight() + 0.9, 0.0);
+        } else if (player == minecraft.player && minecraft.options.getCameraType().isFirstPerson()) {
+            // In first person, aim at where the sword sits on screen (lower right of the view).
+            Vec3 look = player.getLookAngle();
+            Vec3 right = look.cross(new Vec3(0.0, 1.0, 0.0)).normalize();
+            float side = player.getMainArm() == HumanoidArm.RIGHT ? 1.0f : -1.0f;
+            sword = player.getEyePosition().add(look.scale(0.9)).add(right.scale(side * 0.45)).add(0.0, -0.35, 0.0);
+        } else {
+            // Roughly the sword hand, out in front of the body and to the sword side.
+            float yaw = player.yBodyRot * Mth.DEG_TO_RAD;
+            Vec3 forward = new Vec3(-Mth.sin(yaw), 0.0, Mth.cos(yaw));
+            Vec3 right = new Vec3(-Mth.cos(yaw), 0.0, -Mth.sin(yaw));
+            float side = player.getMainArm() == HumanoidArm.RIGHT ? 1.0f : -1.0f;
+            sword = player.position().add(0.0, player.getBbHeight() * 0.55, 0.0)
+                .add(forward.scale(0.5)).add(right.scale(side * 0.4));
+        }
+
+        int count = charging ? LETTERS_PER_TICK_CHARGING : (random.nextFloat() < LETTERS_PER_TICK ? 1 : 0);
+        double spread = charging ? 2.5 : 1.2;
+        for (int i = 0; i < count; i++) {
+            double dx = (random.nextDouble() - 0.5) * 2.0 * spread;
+            double dy = (random.nextDouble() - 0.3) * spread;
+            double dz = (random.nextDouble() - 0.5) * 2.0 * spread;
+            minecraft.level.addParticle(ParticleTypes.ENCHANT, sword.x, sword.y, sword.z, dx, dy, dz);
+        }
     }
 
     /**
