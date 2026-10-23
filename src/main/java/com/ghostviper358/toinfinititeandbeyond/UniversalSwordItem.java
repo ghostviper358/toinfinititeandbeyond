@@ -13,6 +13,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -179,6 +180,37 @@ public class UniversalSwordItem extends Item implements GeoItem {
      * instant it empties out.
      */
     private static final Map<ServerPlayer, Integer> ACTIVE_CHARGERS = new HashMap<>();
+
+    /**
+     * The combo's spin move (see UniversalSwordAnimations), which is also a real attack: enemies
+     * nearby are pulled in, hit once per turn, and blasted away at the end. These timings are
+     * shared with the client animation so the hits land as the sword actually comes around.
+     */
+    public static final int SPIN_DURATION_TICKS = 14; // 0.7 seconds, including wind-up and recovery
+    public static final int SPIN_TURNS = 5;
+
+    /** The spinning (and hitting) happens between these ticks - 5 turns in half a second. */
+    public static final int SPIN_TURN_START_TICK = 2;
+    public static final int SPIN_TURN_END_TICK = 12;
+
+    /** Hostile mobs and other players within this many blocks get dragged in toward the spin. */
+    private static final double SPIN_PULL_RADIUS = 10.0;
+
+    /** Everything this close gets hit on each turn of the spin. */
+    private static final double SPIN_HIT_RADIUS = 3.5;
+
+    /** Damage per turn of the spin - five turns, so five hits on everything caught in it. */
+    private static final float SPIN_HIT_DAMAGE = 200.0f;
+
+    /**
+     * Speed of the final blast. Thrown slightly upward so they fly rather than skid along the
+     * ground - together that carries them roughly 5 blocks away.
+     */
+    private static final double SPIN_KNOCKBACK_SPEED = 0.8;
+    private static final double SPIN_KNOCKBACK_LIFT = 0.45;
+
+    /** Spins currently playing out, ticked once per server tick - see {@link #tickActiveSpins()}. */
+    private static final List<SpinState> ACTIVE_SPINS = new ArrayList<>();
 
     private static final Random RANDOM = new Random();
 
@@ -487,6 +519,125 @@ public class UniversalSwordItem extends Item implements GeoItem {
             if (iterator.next().tick()) {
                 iterator.remove();
             }
+        }
+    }
+
+    /**
+     * Server-side entry point for the combo's spin move, sent by the spinning player's client the
+     * moment the spin starts (the combo itself is tracked client-side - see
+     * UniversalSwordAnimations). Ignored if that player is already mid-spin.
+     */
+    public static void handleSpinAttack(ServerPlayer player) {
+        if (!(player.getMainHandItem().getItem() instanceof UniversalSwordItem)
+                || !(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        for (SpinState spin : ACTIVE_SPINS) {
+            if (spin.player == player) {
+                return;
+            }
+        }
+        ACTIVE_SPINS.add(new SpinState(level, player));
+    }
+
+    /** Advances every spin in progress by one tick. Called once per server tick. */
+    public static void tickActiveSpins() {
+        ACTIVE_SPINS.removeIf(SpinState::tick);
+    }
+
+    /**
+     * One spin attack playing out over {@link #SPIN_DURATION_TICKS}: a vortex pulling hostile mobs
+     * and other players in while it spins, a hit on everything close once per turn, then a blast
+     * outward at the end. Hits deal plain damage rather than going through hurtEnemy(), whose Cosmic Fling would
+     * teleport targets away from the spin they're being pulled into.
+     */
+    private static final class SpinState {
+        private final ServerLevel level;
+        private final ServerPlayer player;
+        private int ticksElapsed = 0;
+
+        SpinState(ServerLevel level, ServerPlayer player) {
+            this.level = level;
+            this.player = player;
+        }
+
+        /** @return true once the spin is over (safe to discard this instance). */
+        boolean tick() {
+            if (!player.isAlive() || player.level() != level) {
+                return true;
+            }
+
+            boolean spinning = ticksElapsed >= SPIN_TURN_START_TICK && ticksElapsed < SPIN_TURN_END_TICK;
+            if (spinning) {
+                pullEnemiesIn();
+                int ticksPerTurn = (SPIN_TURN_END_TICK - SPIN_TURN_START_TICK) / SPIN_TURNS;
+                if ((ticksElapsed - SPIN_TURN_START_TICK) % ticksPerTurn == ticksPerTurn - 1) {
+                    hitEverythingClose();
+                }
+            } else if (ticksElapsed == SPIN_TURN_END_TICK) {
+                blastAway();
+            }
+
+            ticksElapsed++;
+            return ticksElapsed >= SPIN_DURATION_TICKS;
+        }
+
+        /**
+         * Hostile mobs and other players (friendly fire is intentional, same as the shockwave) -
+         * but never the spinner, or players in creative/spectator who can't be hurt anyway.
+         */
+        private List<LivingEntity> enemiesWithin(double radius) {
+            return level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(radius),
+                e -> e.isAlive() && e != player && e.distanceTo(player) <= radius
+                    && (e instanceof Enemy || (e instanceof Player other && !other.isCreative() && !other.isSpectator())));
+        }
+
+        /** Drags enemies toward the player, faster the further out they are, like a whirlpool. */
+        private void pullEnemiesIn() {
+            for (LivingEntity enemy : enemiesWithin(SPIN_PULL_RADIUS)) {
+                Vec3 toPlayer = player.position().subtract(enemy.position()).multiply(1.0, 0.0, 1.0);
+                double distance = toPlayer.length();
+                if (distance < SPIN_HIT_RADIUS * 0.6) {
+                    continue; // already in close - don't pull them right into the player
+                }
+                double speed = Math.min(distance * 0.3, 1.5);
+                Vec3 pull = toPlayer.normalize().scale(speed);
+                enemy.setDeltaMovement(pull.x, Math.max(enemy.getDeltaMovement().y, 0.0), pull.z);
+                enemy.hurtMarked = true; // sync the new velocity to clients right away
+                level.sendParticles(ParticleTypes.REVERSE_PORTAL, enemy.getX(), enemy.getY() + enemy.getBbHeight() * 0.5,
+                    enemy.getZ(), 2, 0.2, 0.3, 0.2, 0.02);
+            }
+        }
+
+        private void hitEverythingClose() {
+            for (LivingEntity enemy : enemiesWithin(SPIN_HIT_RADIUS)) {
+                // Normally a mob can't be hurt again for half a second after a hit; the spin's
+                // hits come faster than that, so clear it to let every turn land.
+                enemy.invulnerableTime = 0;
+                enemy.hurtServer(level, level.damageSources().playerAttack(player), SPIN_HIT_DAMAGE);
+                spawnCosmicBlastParticles(level, enemy);
+            }
+            level.sendParticles(ParticleTypes.SWEEP_ATTACK, player.getX(), player.getY() + 1.0, player.getZ(),
+                6, 1.6, 0.2, 1.6, 0.0);
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.0F, 0.8F + RANDOM.nextFloat() * 0.4F);
+        }
+
+        /** Throws everything still standing around the player outward, about 5 blocks away. */
+        private void blastAway() {
+            for (LivingEntity enemy : enemiesWithin(SPIN_HIT_RADIUS + 1.0)) {
+                Vec3 away = enemy.position().subtract(player.position()).multiply(1.0, 0.0, 1.0);
+                if (away.lengthSqr() < 1.0E-4) {
+                    away = player.getLookAngle().multiply(1.0, 0.0, 1.0);
+                }
+                Vec3 push = away.normalize().scale(SPIN_KNOCKBACK_SPEED);
+                enemy.setDeltaMovement(push.x, SPIN_KNOCKBACK_LIFT, push.z);
+                enemy.hurtMarked = true;
+            }
+            level.sendParticles(ParticleTypes.EXPLOSION, player.getX(), player.getY() + 1.0, player.getZ(),
+                3, 1.0, 0.3, 1.0, 0.0);
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.0F, 1.4F);
         }
     }
 

@@ -15,6 +15,7 @@ import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.event.RenderPlayerEvent;
+import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import org.slf4j.Logger;
 
@@ -37,9 +38,11 @@ import java.util.WeakHashMap;
  * - Third person: {@link #getArmPose} hands the player renderer one of our custom arm poses, whose
  *   transformers move the arm/body. {@link #onRenderPlayerPre} switches off vanilla's own swing
  *   (it would otherwise be layered on top of ours) and spins the whole player for the spin move.
+ *   The spin is also a real attack, run server-side - see UniversalSwordItem.handleSpinAttack.
  *   {@link #bladeTilt} rotates the sword in the hand (see UniversalSwordRenderer) so the blade can
  *   point along the arm for the stab, spin and charge instead of sticking out sideways.
- * - First person: {@link #applyFirstPersonTransform} replaces vanilla's in-hand swing.
+ * - First person: {@link #applyFirstPersonTransform} replaces vanilla's in-hand swing, and
+ *   {@link #onComputeCameraAngles} whirls the camera around for the spin.
  *
  * The animation clock is each player's own tickCount, so moves play correctly for other players
  * too: swings already reach every client (vanilla's swing packet), and charging is mirrored to
@@ -57,7 +60,7 @@ public final class UniversalSwordAnimations {
     /** How long each attack move lasts, in ticks (20 ticks = 1 second). */
     private static final float STAB_TICKS = 12.0f;
     private static final float SLASH_TICKS = 12.0f;
-    private static final float SPIN_TICKS = 20.0f;
+    private static final float SPIN_TICKS = UniversalSwordItem.SPIN_DURATION_TICKS;
 
     /** How long the arm takes to rise into the overhead charge pose. */
     private static final float CHARGE_RAISE_TICKS = 8.0f;
@@ -119,9 +122,13 @@ public final class UniversalSwordAnimations {
     /** Arm pitch for the charge pose - just short of straight up, so it reads slightly forward. */
     private static final float CHARGE_ARM_PITCH = -3.0f;
 
-    /** The spin's full-body turn happens between these points of the move. */
-    private static final float SPIN_TURN_START = 0.10f;
-    private static final float SPIN_TURN_END = 0.85f;
+    /**
+     * The spin's turning happens between these points of the move, at a steady speed - matching
+     * the server's timing (see UniversalSwordItem.SPIN_TURN_START_TICK), so each hit lands as a
+     * turn completes.
+     */
+    private static final float SPIN_TURN_START = UniversalSwordItem.SPIN_TURN_START_TICK / SPIN_TICKS;
+    private static final float SPIN_TURN_END = UniversalSwordItem.SPIN_TURN_END_TICK / SPIN_TICKS;
 
     /**
      * First-person keyframes, one row per key: time, offset x/y/z (screen space: +x right,
@@ -153,7 +160,7 @@ public final class UniversalSwordAnimations {
         { 1.00f, 0.00f, 0.00f, 0.00f, 0, 0, 0 },
     };
 
-    /** The first-person spin points the blade ahead; the sweep itself is an orbit around the camera. */
+    /** The first-person spin holds the blade out ahead while the camera itself whirls around (see onComputeCameraAngles). */
     private static final float[][] SPIN_1P = {
         { 0.00f, 0.00f, 0.00f, 0.00f, 0, 0, 0 },
         { 0.15f, 0.00f, 0.05f, 0.00f, -110, 0, 0 },
@@ -260,6 +267,12 @@ public final class UniversalSwordAnimations {
             default -> SLASH_TICKS;
         };
         LOGGER.debug("Universal Sword combo: {} plays {}", entity.getName().getString(), combo.move);
+
+        // The spin is also a real attack (pull, hits, knockback), which the server runs. Only the
+        // spinning player's own client reports it - everyone else is just watching.
+        if (combo.move == Move.SPIN && entity == Minecraft.getInstance().player) {
+            UniversalSwordNetworking.sendSpinAttackToServer();
+        }
     }
 
     /** Called for the local player by UniversalSwordClientHandler, and for others by the charge-state packet. */
@@ -306,6 +319,45 @@ public final class UniversalSwordAnimations {
         return new Sample(combo.move, progress, now);
     }
 
+    /** How far (degrees) the spinner has turned at this moment of the spin - SPIN_TURNS full circles. */
+    private static float spinDegrees(float progress) {
+        float turn = Mth.clamp((progress - SPIN_TURN_START) / (SPIN_TURN_END - SPIN_TURN_START), 0.0f, 1.0f);
+        return 360.0f * UniversalSwordItem.SPIN_TURNS * turn;
+    }
+
+    /**
+     * How strongly the sword should glow right now (0-1): builds up over the whole charge, so it's
+     * at full strength just as the shockwave is ready to fire. See UniversalSwordRenderer.
+     */
+    public static float chargeGlow(LivingEntity entity, float partialTick) {
+        Integer chargeStart = CHARGE_STARTS.get(entity.getId());
+        if (chargeStart == null || !(entity.getMainHandItem().getItem() instanceof UniversalSwordItem)) {
+            return 0.0f;
+        }
+        float charged = (entity.tickCount + partialTick - chargeStart) / UniversalSwordItem.CHARGE_DURATION_TICKS;
+        return Mth.clamp(charged, 0.0f, 1.0f);
+    }
+
+    /**
+     * First person only: actually whirls the camera around during the spin, so you see the world
+     * spin past. Only the view turns - where you're really facing (and aiming) never changes, so
+     * you come out of the spin looking exactly where you went in. In third person the camera
+     * stays put and you watch your whole body spin instead (see onRenderPlayerPre).
+     */
+    public static void onComputeCameraAngles(ViewportEvent.ComputeCameraAngles event) {
+        Minecraft minecraft = Minecraft.getInstance();
+        LocalPlayer player = minecraft.player;
+        if (player == null || !minecraft.options.getCameraType().isFirstPerson()) {
+            return;
+        }
+        Sample sample = sample(player, (float) event.getPartialTick());
+        if (sample.move() != Move.SPIN) {
+            return;
+        }
+        float side = player.getMainArm() == HumanoidArm.RIGHT ? 1.0f : -1.0f;
+        event.setYaw(event.getYaw() + side * spinDegrees(sample.progress()));
+    }
+
     private static float partialTick() {
         return Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
     }
@@ -343,11 +395,10 @@ public final class UniversalSwordAnimations {
         state.attackTime = 0.0f;
 
         if (current.move() == Move.SPIN) {
-            float turn = smooth(Mth.clamp((current.progress() - SPIN_TURN_START) / (SPIN_TURN_END - SPIN_TURN_START), 0.0f, 1.0f));
             float side = state.mainArm == HumanoidArm.RIGHT ? 1.0f : -1.0f;
             PoseStack poseStack = event.getPoseStack();
             poseStack.pushPose();
-            poseStack.mulPose(Axis.YP.rotationDegrees(-side * 360.0f * turn));
+            poseStack.mulPose(Axis.YP.rotationDegrees(-side * spinDegrees(current.progress())));
             spinPushed = true;
         }
     }
@@ -417,13 +468,6 @@ public final class UniversalSwordAnimations {
             return false;
         }
         float side = arm == HumanoidArm.RIGHT ? 1.0f : -1.0f;
-
-        if (sample.move() == Move.SPIN) {
-            // Orbit the sword all the way around the camera - it sweeps across the screen, behind
-            // you, and back in from the other side.
-            float turn = smooth(Mth.clamp((sample.progress() - SPIN_TURN_START) / (SPIN_TURN_END - SPIN_TURN_START), 0.0f, 1.0f));
-            poseStack.mulPose(Axis.YP.rotationDegrees(side * 360.0f * turn));
-        }
 
         // Vanilla's resting hand position (ItemInHandRenderer#applyItemArmTransform).
         poseStack.translate(side * 0.56f, -0.52f + equipProcess * -0.6f, -0.72f);

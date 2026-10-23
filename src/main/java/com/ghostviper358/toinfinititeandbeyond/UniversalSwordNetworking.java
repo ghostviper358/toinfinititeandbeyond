@@ -71,6 +71,17 @@ public final class UniversalSwordNetworking {
             })
             .add();
 
+        CHANNEL.messageBuilder(SpinAttackPacket.class, NetworkDirection.PLAY_TO_SERVER)
+            .encoder((packet, buf) -> { /* no fields */ })
+            .decoder(buf -> new SpinAttackPacket())
+            .consumerMainThread((packet, context) -> {
+                ServerPlayer sender = context.getSender();
+                if (sender != null) {
+                    UniversalSwordItem.handleSpinAttack(sender);
+                }
+            })
+            .add();
+
         CHANNEL.messageBuilder(ChargeStatePacket.class, NetworkDirection.PLAY_TO_CLIENT)
             .encoder((packet, buf) -> {
                 buf.writeVarInt(packet.entityId());
@@ -94,6 +105,10 @@ public final class UniversalSwordNetworking {
     public static final class StopChargePacket {
     }
 
+    /** Client -> server: sent once, when this player's attack combo reaches its spin move - the spin's real attack. */
+    public static final class SpinAttackPacket {
+    }
+
     /**
      * Server -> nearby clients: a player started or stopped charging, so everyone around them
      * sees the sword-raised-overhead pose (see UniversalSwordAnimations). The charging player's
@@ -113,6 +128,10 @@ public final class UniversalSwordNetworking {
 
     public static void sendStopChargeToServer() {
         CHANNEL.send(new StopChargePacket(), PacketDistributor.SERVER.noArg());
+    }
+
+    public static void sendSpinAttackToServer() {
+        CHANNEL.send(new SpinAttackPacket(), PacketDistributor.SERVER.noArg());
     }
 
     public static void sendChargeStateToTrackers(ServerPlayer player, boolean charging) {
