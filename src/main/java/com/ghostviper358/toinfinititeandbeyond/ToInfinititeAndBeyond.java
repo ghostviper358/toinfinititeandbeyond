@@ -34,6 +34,7 @@ import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
@@ -41,7 +42,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
+import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -784,6 +788,65 @@ public final class ToInfinititeAndBeyond {
         )
     );
 
+    // Creates the Universal Helmet - the final and most powerful piece of the Universal armor
+    // set (see docs/requirements/universal_helmet.md). Same 999 armor / 6 toughness / 40%
+    // knockback resistance / unbreakable stats as the rest of the set, but +100 max health
+    // (50 hearts) - the most of any piece - stacking with the others. The abilities live in
+    // UniversalHelmetItem.
+    public static final RegistryObject<Item> UNIVERSAL_HELMET = ITEMS.register("universal_helmet",
+        () -> new UniversalHelmetItem(
+            new Item.Properties()
+                .setId(ITEMS.key("universal_helmet"))
+                .rarity(Rarity.EPIC)
+                .component(DataComponents.UNBREAKABLE, Unit.INSTANCE)
+                .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.HEAD)
+                    .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .setAsset(net.minecraft.resources.ResourceKey.create(EquipmentAssets.ROOT_ID,
+                        ResourceLocation.fromNamespaceAndPath(MOD_ID, "universal_armor")))
+                    .build()
+                )
+                .attributes(ItemAttributeModifiers.builder()
+                    .add(
+                        Attributes.ARMOR,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_helmet_armor"),
+                            999.0, // the set's signature over-the-top number
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.HEAD
+                    )
+                    .add(
+                        Attributes.ARMOR_TOUGHNESS,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_helmet_toughness"),
+                            6.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.HEAD
+                    )
+                    .add(
+                        Attributes.MAX_HEALTH,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_helmet_health_boost"),
+                            100.0, // +100 health (50 hearts) while worn - the most of any piece
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.HEAD
+                    )
+                    .add(
+                        Attributes.KNOCKBACK_RESISTANCE,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("universal_helmet_knockback_resistance"),
+                            0.40,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.HEAD
+                    )
+                    .build()
+                )
+        )
+    );
+
     // Helper method to create ResourceLocation
     public static ResourceLocation resourceLocation(String path) {
         return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
@@ -831,6 +894,15 @@ public final class ToInfinititeAndBeyond {
         UniversalLeggingsNetworking.register();
         TickEvent.ClientTickEvent.Post.BUS.addListener(UniversalLeggingsClientHandler::onClientTick);
 
+        // Universal Helmet: Eye Beam / Time Stop key packets (the keys themselves are client-only
+        // - see ClientModEvents), Mind Control's target redirect, and two safety nets so Time
+        // Stop never leaves a mob frozen for good: unfreeze everything when the server stops, and
+        // unfreeze any mob that was saved to disk mid-freeze as it loads back in.
+        UniversalHelmetNetworking.register();
+        LivingChangeTargetEvent.BUS.addListener((java.util.function.Predicate<LivingChangeTargetEvent>) UniversalHelmetItem::onChangeTarget);
+        EntityJoinLevelEvent.BUS.addListener((java.util.function.Consumer<EntityJoinLevelEvent>) UniversalHelmetItem::onEntityJoin);
+        ServerStoppingEvent.BUS.addListener(event -> UniversalHelmetItem.endAllTimeStops());
+
         // Cosmic Apple's permanent max-health bonus: a fresh Player entity (created on
         // respawn, or on login) gets a brand-new AttributeMap that won't remember a
         // modifier that was only ever added to the old instance, so we re-sync it from
@@ -871,6 +943,7 @@ public final class ToInfinititeAndBeyond {
             event.accept(UNIVERSAL_CHESTPLATE.get());
             event.accept(UNIVERSAL_LEGGINGS.get());
             event.accept(UNIVERSAL_BOOTS.get());
+            event.accept(UNIVERSAL_HELMET.get());
             event.accept(INFINITITE_MONSTROSITY_SPAWN_EGG.get());
         }
     }
@@ -898,6 +971,14 @@ public final class ToInfinititeAndBeyond {
             RenderPlayerEvent.Pre.BUS.addListener((java.util.function.Consumer<RenderPlayerEvent.Pre>) UniversalSwordAnimations::onRenderPlayerPre);
             RenderPlayerEvent.Post.BUS.addListener(UniversalSwordAnimations::onRenderPlayerPost);
             ViewportEvent.ComputeCameraAngles.BUS.addListener(UniversalSwordAnimations::onComputeCameraAngles);
+
+            // Universal Helmet: Eye Beam / Time Stop key presses.
+            TickEvent.ClientTickEvent.Post.BUS.addListener(UniversalHelmetClientHandler::onClientTick);
+        }
+
+        @SubscribeEvent
+        public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
+            UniversalHelmetClientHandler.onRegisterKeyMappings(event);
         }
 
         @SubscribeEvent
@@ -948,6 +1029,8 @@ public final class ToInfinititeAndBeyond {
             UniversalLeggingsItem.tick(player, serverLevel);
             // Universal Boots: Cosmic Flight, Meteor Slam, Supernova Trail, no fall damage
             UniversalBootsItem.tick(player, serverLevel);
+            // Universal Helmet: Mind Control
+            UniversalHelmetItem.tick(player, serverLevel);
         }
         if (player.level().isClientSide() && player.isLocalPlayer()) {
             // Universal Boots: Liquid Walking has to happen on the wearer's own client, since
@@ -965,6 +1048,7 @@ public final class ToInfinititeAndBeyond {
         UniversalSwordItem.tickActiveShockwaves();
         UniversalSwordItem.tickActiveChargers();
         UniversalSwordItem.tickActiveSpins();
+        UniversalHelmetItem.tickTimeStops();
     }
 
     /**
