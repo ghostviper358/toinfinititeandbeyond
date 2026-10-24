@@ -1,5 +1,5 @@
 """
-Generate the Infinitite Monstrosity's custom boss bar sprites (see MonstrosityBossBar.java).
+Generate the Infinitite Monstrosity's custom boss bar sprites (see BossBars.java).
 Uses only stdlib (struct + zlib) - no Pillow required, same approach as the other
 gen_*_texture.py scripts in this repo. All go in textures/gui/sprites/boss_bar/monstrosity/:
 

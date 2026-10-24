@@ -31,7 +31,7 @@ model and texture.
   whenever a Monstrosity is within 64 blocks.
 - The portrait's eyes, core and cracks pulse with light. In phase 2 the fill turns hot pink, the
   portrait blazes, the pulse quickens, and the name becomes "Infinitite Monstrosity - Enraged".
-- Sprites: `gen_monstrosity_boss_bar.py`. Drawn by `MonstrosityBossBar` straight from the boss's
+- Sprites: `gen_monstrosity_boss_bar.py`. Drawn by `BossBars` straight from the boss's
   synced health - it isn't a vanilla boss bar at all.
 
 ## Phase 1 (above half health)

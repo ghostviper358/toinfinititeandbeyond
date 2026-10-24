@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "toinfinititeandbeyond:item/living_void_spawn_egg"
+  }
+}

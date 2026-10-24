@@ -33,5 +33,8 @@
   "entity.toinfinititeandbeyond.infinitite_monstrosity.enraged": "Infinitite Monstrosity - Enraged",
   "entity.toinfinititeandbeyond.monstrosity_rock": "Monstrosity Rock",
   "item.toinfinititeandbeyond.monstrosity_heart": "Monstrosity Heart",
+  "entity.toinfinititeandbeyond.living_void": "The Living Void",
+  "entity.toinfinititeandbeyond.void_orb": "Void Orb",
+  "item.toinfinititeandbeyond.living_void_spawn_egg": "Living Void Spawn Egg",
   "item.toinfinititeandbeyond.infinitite_monstrosity_spawn_egg": "Infinitite Monstrosity Spawn Egg"
 }

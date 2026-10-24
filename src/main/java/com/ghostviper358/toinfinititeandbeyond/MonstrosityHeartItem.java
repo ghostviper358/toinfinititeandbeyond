@@ -1,11 +1,12 @@
 package com.ghostviper358.toinfinititeandbeyond;
 
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Monstrosity Heart - a trophy dropped by the Infinitite Monstrosity: its still-glowing purple
- * heart. No use yet (a future recipe or boss could need it); it just shimmers.
+ * Monstrosity Heart - dropped by the Infinitite Monstrosity: its still-glowing purple heart.
+ * Thrown on the ground with 10 Infinitite Ingots and a Universal Shard, it summons the Living Void.
  * See docs/requirements/infinitite_monstrosity.md.
  */
 public class MonstrosityHeartItem extends Item {
@@ -17,5 +18,15 @@ public class MonstrosityHeartItem extends Item {
     @Override
     public boolean isFoil(ItemStack stack) {
         return true;
+    }
+
+    /**
+     * Thrown on the ground with at least 10 Infinitite Ingots and 1 Universal Shard, the heart
+     * summons the Living Void - see LivingVoid.checkForSummon.
+     */
+    @Override
+    public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
+        LivingVoid.checkForSummon(entity);
+        return false;
     }
 }

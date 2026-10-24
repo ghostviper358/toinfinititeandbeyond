@@ -47,7 +47,7 @@ import java.util.List;
  *
  * Stats: 1000 health (500 hearts), 30 attack damage, 30 armor / 10 toughness, immune to
  * knockback, 5x normal size. Hunts down the nearest player in range. Its boss health bar is drawn
- * by MonstrosityBossBar, straight from its synced health.
+ * by BossBars, straight from its synced health.
  *
  * Phase 1 (above half health):
  *   - Melee hits inflict Wither II, Poison II and Weakness III.
@@ -145,6 +145,9 @@ public class InfinititeMonstrosity extends Monster {
     public InfinititeMonstrosity(EntityType<? extends Monster> type, Level level) {
         super(type, level);
         this.xpReward = 500;
+        // The hitbox is worked out before the SCALE attribute exists, so it starts out unscaled -
+        // recalculate it now, or the boss's hitbox stays a fraction of its size.
+        this.refreshDimensions();
     }
 
     // ---------------------------------------------------------------------------
@@ -179,6 +182,12 @@ public class InfinititeMonstrosity extends Monster {
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, false));
+    }
+
+    /** A boss never quietly despawns when players wander off. */
+    @Override
+    public boolean requiresCustomPersistence() {
+        return true;
     }
 
     @Override

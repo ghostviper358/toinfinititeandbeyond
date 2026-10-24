@@ -34,6 +34,7 @@ import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraft.client.renderer.entity.NoopRenderer;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
@@ -428,7 +429,6 @@ public final class ToInfinititeAndBeyond {
     );
 
     // Register the Infinitite Monstrosity mob entity type
-    // Size 1.5 x 2.9 (pre-scale; the SCALE attribute multiplies it to ~4.5 x 8.7 in-world)
     public static final RegistryObject<EntityType<InfinititeMonstrosity>> INFINITITE_MONSTROSITY = ENTITY_TYPES.register("infinitite_monstrosity",
         () -> EntityType.Builder.<InfinititeMonstrosity>of(InfinititeMonstrosity::new, MobCategory.MONSTER)
             // Short and wide to match the hunched golem with its long arms (11 x 10 blocks once
@@ -447,6 +447,34 @@ public final class ToInfinititeAndBeyond {
             .clientTrackingRange(8)
             .updateInterval(10)
             .build(ENTITY_TYPES.key("monstrosity_rock"))
+    );
+
+    // The Living Void - the second boss, summoned with a Monstrosity Heart (see LivingVoid).
+    // Its 4x SCALE makes this 8 x 10 blocks in-world: the eye, the shard rings and the tentacles.
+    public static final RegistryObject<EntityType<LivingVoid>> LIVING_VOID = ENTITY_TYPES.register("living_void",
+        () -> EntityType.Builder.<LivingVoid>of(LivingVoid::new, MobCategory.MONSTER)
+            .sized(2.0F, 2.5F)
+            .fireImmune()
+            .clientTrackingRange(10)
+            .updateInterval(2)
+            .build(ENTITY_TYPES.key("living_void"))
+    );
+
+    // The Living Void's slow homing orbs of darkness (drawn with particles only - see onRegisterRenderers)
+    public static final RegistryObject<EntityType<VoidOrbEntity>> VOID_ORB = ENTITY_TYPES.register("void_orb",
+        () -> EntityType.Builder.<VoidOrbEntity>of(VoidOrbEntity::new, MobCategory.MISC)
+            .sized(0.8F, 0.8F)
+            .clientTrackingRange(8)
+            .updateInterval(2)
+            .build(ENTITY_TYPES.key("void_orb"))
+    );
+
+    // Spawn egg for the Living Void (for testing - normally it's summoned with a Monstrosity Heart)
+    public static final RegistryObject<Item> LIVING_VOID_SPAWN_EGG = ITEMS.register("living_void_spawn_egg",
+        () -> new SpawnEggItem(
+            LIVING_VOID.get(),
+            new Item.Properties().setId(ITEMS.key("living_void_spawn_egg"))
+        )
     );
 
     // Monstrosity Heart - the trophy the Infinitite Monstrosity drops
@@ -1008,6 +1036,7 @@ public final class ToInfinititeAndBeyond {
             event.accept(UNIVERSAL_CORE.get());
             event.accept(INFINITITE_MONSTROSITY_SPAWN_EGG.get());
             event.accept(MONSTROSITY_HEART.get());
+            event.accept(LIVING_VOID_SPAWN_EGG.get());
         }
     }
 
@@ -1017,6 +1046,7 @@ public final class ToInfinititeAndBeyond {
      */
     public static void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
         event.put(INFINITITE_MONSTROSITY.get(), InfinititeMonstrosity.createAttributes().build());
+        event.put(LIVING_VOID.get(), LivingVoid.createAttributes().build());
     }
 
     // You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent
@@ -1047,8 +1077,8 @@ public final class ToInfinititeAndBeyond {
         public static void onAddGuiOverlayLayers(AddGuiOverlayLayersEvent event) {
             // Universal Core: a god's hearts are gold and white.
             UniversalGodHearts.onAddLayers(event);
-            // Infinitite Monstrosity: its custom boss bar.
-            MonstrosityBossBar.onAddLayers(event);
+            // The bosses' custom boss bars.
+            BossBars.onAddLayers(event);
         }
 
         @SubscribeEvent
@@ -1062,6 +1092,8 @@ public final class ToInfinititeAndBeyond {
             event.registerEntityRenderer(INFINITITE_MONSTROSITY.get(), InfinititeMonstrosityRenderer::new);
             // Rocks are drawn 3x as big as a block item, and always bright (they're glowing hot).
             event.registerEntityRenderer(MONSTROSITY_ROCK.get(), context -> new ThrownItemRenderer<>(context, 3.0f, true));
+            event.registerEntityRenderer(LIVING_VOID.get(), LivingVoidRenderer::new);
+            event.registerEntityRenderer(VOID_ORB.get(), NoopRenderer::new);
         }
 
         @SubscribeEvent
@@ -1070,6 +1102,7 @@ public final class ToInfinititeAndBeyond {
                 InfinititeMonstrosityRenderer.LAYER_LOCATION,
                 InfinititeMonstrosityModel::createBodyLayer
             );
+            event.registerLayerDefinition(LivingVoidRenderer.LAYER_LOCATION, LivingVoidModel::createBodyLayer);
         }
     }
 
@@ -1130,6 +1163,7 @@ public final class ToInfinititeAndBeyond {
         UniversalSwordItem.tickActiveSpins();
         UniversalHelmetItem.tickTimeStops();
         UniversalCoreItem.tickPowers();
+        LivingVoid.tickRituals();
     }
 
     /**
