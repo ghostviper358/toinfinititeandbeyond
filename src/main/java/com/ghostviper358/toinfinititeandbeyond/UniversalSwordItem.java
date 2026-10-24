@@ -283,8 +283,9 @@ public class UniversalSwordItem extends Item implements GeoItem {
         // 5. Cosmic Drain - heal the wielder
         attacker.heal(LIFE_STEAL_AMOUNT);
 
-        // 6. Cosmic Fling - teleport the target away from the wielder (inverted Void Pull)
-        if (serverLevel != null) {
+        // 6. Cosmic Fling - teleport the target away from the wielder (inverted Void Pull).
+        // Not bosses - they hold their ground.
+        if (serverLevel != null && !(target instanceof ModBoss)) {
             flingTarget(serverLevel, attacker, target);
         }
 
@@ -293,8 +294,9 @@ public class UniversalSwordItem extends Item implements GeoItem {
             spawnHitParticles(serverLevel, target);
         }
 
-        // 8. Cosmic Blast - modest chance to instantly destroy the target
-        if (serverLevel != null && target.isAlive() && RANDOM.nextFloat() < INSTANT_KILL_CHANCE) {
+        // 8. Cosmic Blast - modest chance to instantly destroy the target. Never a boss - one lucky
+        // hit shouldn't end a boss fight.
+        if (serverLevel != null && target.isAlive() && !(target instanceof ModBoss) && RANDOM.nextFloat() < INSTANT_KILL_CHANCE) {
             spawnCosmicBlastParticles(serverLevel, target);
             target.kill(serverLevel);
             if (attacker instanceof Player player) {
@@ -446,7 +448,7 @@ public class UniversalSwordItem extends Item implements GeoItem {
      * A single purple-tinted lightning strike landing at a random spot near the charging player
      * - a real (visual-only) LightningBolt entity for the authentic flash/thunderclap, a column
      * of cosmic particles to tint it purple instead of vanilla's white/yellow, and an
-     * instant-kill explosion burst at the impact point. The wielder themselves is never a valid
+     * instant-kill explosion burst at the impact point (bosses just take a big hit instead). The wielder themselves is never a valid
      * strike target (excluded below), matching the shockwave's own "never hurts its caster" rule.
      */
     private static void strikePurpleLightning(ServerLevel level, ServerPlayer caster) {
@@ -479,7 +481,12 @@ public class UniversalSwordItem extends Item implements GeoItem {
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, killBox,
                 e -> e.isAlive() && !e.getUUID().equals(casterId))) {
             spawnCosmicBlastParticles(level, victim);
-            victim.kill(level);
+            if (victim instanceof ModBoss) {
+                // Bosses aren't instantly killed - one lucky strike shouldn't end a boss fight.
+                victim.hurtServer(level, level.damageSources().playerAttack(caster), SHOCKWAVE_DAMAGE);
+            } else {
+                victim.kill(level);
+            }
         }
     }
 

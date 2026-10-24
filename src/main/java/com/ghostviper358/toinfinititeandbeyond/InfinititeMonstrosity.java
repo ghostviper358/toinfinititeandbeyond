@@ -67,7 +67,7 @@ import java.util.List;
  * Attacks run one at a time on a timeline (see {@link Attack}): the current attack and when it
  * started are synced to clients, so InfinititeMonstrosityModel can play the matching pose.
  */
-public class InfinititeMonstrosity extends Monster {
+public class InfinititeMonstrosity extends Monster implements ModBoss {
 
     /** The boss's special attacks. Each id is synced to clients for the animations. */
     public enum Attack {
@@ -217,6 +217,11 @@ public class InfinititeMonstrosity extends Monster {
 
     public boolean isEnraged() {
         return this.entityData.get(ENRAGED);
+    }
+
+    @Override
+    public float getBossHealthFraction() {
+        return this.getHealth() / this.getMaxHealth();
     }
 
     /** Client side: how many ticks into the current attack we are. */

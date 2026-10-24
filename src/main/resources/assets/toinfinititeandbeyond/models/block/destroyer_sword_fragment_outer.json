@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/outer_stairs",
+  "textures": {
+    "bottom": "toinfinititeandbeyond:block/destroyer_sword_fragment",
+    "top": "toinfinititeandbeyond:block/destroyer_sword_fragment",
+    "side": "toinfinititeandbeyond:block/destroyer_sword_fragment"
+  }
+}

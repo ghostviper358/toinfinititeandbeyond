@@ -55,12 +55,13 @@ import java.util.UUID;
  *   - Ground Beam - a beam from its eye explodes on the ground and leaves purple fire burning.
  * Below half health it attacks faster and opens twice as many rifts.
  *
- * Drops a pile of Universal Shards, a second lore book, and lots of XP. Its minions vanish with it.
+ * Drops a pile of Universal Shards, a second lore book, the Void Seal (break it to summon the
+ * Universal Destroyer), and lots of XP. Its minions vanish with it.
  *
  * The current attack and when it started are synced to clients for the animations, the same way
  * as InfinititeMonstrosity.
  */
-public class LivingVoid extends Monster {
+public class LivingVoid extends GiantBoss {
 
     public enum Attack {
         NONE(0),
@@ -167,7 +168,7 @@ public class LivingVoid extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-            .add(Attributes.MAX_HEALTH, 2000.0)          // 1000 hearts
+            .add(Attributes.MAX_HEALTH, 1024.0)          // vanilla's cap - the real 2000 is getBossMaxHealth()
             .add(Attributes.ATTACK_DAMAGE, 20.0)
             .add(Attributes.MOVEMENT_SPEED, 0.3)
             .add(Attributes.FOLLOW_RANGE, 96.0)
@@ -175,6 +176,12 @@ public class LivingVoid extends Monster {
             .add(Attributes.ARMOR, 20.0)
             .add(Attributes.ARMOR_TOUGHNESS, 10.0)
             .add(Attributes.SCALE, 4.0);                 // 4x physical size
+    }
+
+    /** 2000 health (1000 hearts) - more than vanilla allows, so it's kept in GiantBoss's pool. */
+    @Override
+    protected float getBossMaxHealth() {
+        return 2000.0f;
     }
 
     @Override
@@ -240,7 +247,7 @@ public class LivingVoid extends Monster {
     }
 
     private boolean isAngry() {
-        return this.getHealth() < this.getMaxHealth() * 0.5f;
+        return getBossHealthFraction() < 0.5f;
     }
 
     // ---------------------------------------------------------------------------
@@ -581,12 +588,13 @@ public class LivingVoid extends Monster {
         }
     }
 
-    /** A pile of Universal Shards and the second lore book. (The XP is xpReward.) */
+    /** A pile of Universal Shards, the second lore book, and the Void Seal. (The XP is xpReward.) */
     @Override
     protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
         super.dropCustomDeathLoot(level, source, recentlyHit);
         this.spawnAtLocation(level, new ItemStack(ToInfinititeAndBeyond.UNIVERSAL_SHARD.get(), 8 + this.random.nextInt(9)));
         this.spawnAtLocation(level, createLoreBook());
+        this.spawnAtLocation(level, new ItemStack(ToInfinititeAndBeyond.VOID_SEAL_ITEM.get()));
     }
 
     /**

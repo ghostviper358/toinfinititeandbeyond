@@ -25,7 +25,7 @@ import java.util.function.Predicate;
  *
  * Drawn entirely client-side, straight from each nearby boss's synced health - so there's no
  * vanilla boss bar to hide. Sprites live in textures/gui/sprites/boss_bar/<boss>/ (painted by
- * gen_monstrosity_boss_bar.py and gen_living_void_texture.py).
+ * gen_monstrosity_boss_bar.py, gen_living_void_texture.py and gen_universal_destroyer_texture.py).
  */
 public final class BossBars {
 
@@ -60,7 +60,9 @@ public final class BossBars {
         new Style(InfinititeMonstrosity.class, "monstrosity", "entity.toinfinititeandbeyond.infinitite_monstrosity",
             0xFFE2B6FF, 0xFFFF9BEB, boss -> ((InfinititeMonstrosity) boss).isEnraged()),
         new Style(LivingVoid.class, "living_void", "entity.toinfinititeandbeyond.living_void",
-            0xFFC9A6FF, 0xFFC9A6FF, boss -> false)
+            0xFFC9A6FF, 0xFFC9A6FF, boss -> false),
+        new Style(UniversalDestroyer.class, "universal_destroyer", "entity.toinfinititeandbeyond.universal_destroyer",
+            0xFFD9B8FF, 0xFFFF5A5A, boss -> ((UniversalDestroyer) boss).getPhase() >= 3)
     );
 
     private BossBars() {
@@ -92,7 +94,8 @@ public final class BossBars {
 
     private static void draw(GuiGraphics graphics, Minecraft minecraft, Style style, LivingEntity boss, int top, float seconds) {
         boolean angry = style.angry().test(boss);
-        float progress = Mth.clamp(boss.getHealth() / boss.getMaxHealth(), 0.0f, 1.0f);
+        float progress = boss instanceof ModBoss modBoss ? modBoss.getBossHealthFraction()
+            : Mth.clamp(boss.getHealth() / boss.getMaxHealth(), 0.0f, 1.0f);
         int centerX = graphics.guiWidth() / 2;
         int barX = centerX - BAR_WIDTH / 2;
         int frameY = top + PORTRAIT_SIZE - PORTRAIT_OVERLAP;

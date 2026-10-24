@@ -350,7 +350,7 @@ public class UniversalCoreItem extends Item implements GeoItem {
         player.displayClientMessage(Component.literal("§e§lThe heavens obey you!"), true);
     }
 
-    /** Delete: whatever mob you're looking at is wiped from existence (players can't be deleted). */
+    /** Delete: whatever mob you're looking at is wiped from existence (players and bosses can't be deleted). */
     public static void handleDelete(ServerPlayer player) {
         if (!isGod(player) || !(player.level() instanceof ServerLevel level)) {
             return;
@@ -359,7 +359,8 @@ public class UniversalCoreItem extends Item implements GeoItem {
         Vec3 reach = eye.add(player.getLookAngle().scale(DELETE_RANGE));
         Vec3 blocked = level.clip(new ClipContext(eye, reach, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player)).getLocation();
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(level, player, eye, blocked,
-            new AABB(eye, blocked).inflate(1.0), e -> e instanceof LivingEntity && !(e instanceof Player) && e.isAlive(), 0.3f);
+            new AABB(eye, blocked).inflate(1.0), e -> e instanceof LivingEntity && !(e instanceof Player) && !(e instanceof ModBoss)
+                && e.isAlive(), 0.3f);
         if (hit == null || onCooldown(player, "delete", DELETE_COOLDOWN_TICKS)) {
             return;
         }

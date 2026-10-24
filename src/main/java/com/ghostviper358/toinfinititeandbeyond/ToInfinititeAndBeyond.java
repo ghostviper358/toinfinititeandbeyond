@@ -477,6 +477,106 @@ public final class ToInfinititeAndBeyond {
         )
     );
 
+    // The Universal Destroyer - the final boss, summoned by breaking a Void Seal (see UniversalDestroyer).
+    // Its 16x SCALE (Minecraft's limit - the renderer draws it 1.25x bigger) makes the hitbox
+    // 36 x 56 blocks: its whole body, from the ground all the way up past its crown, so the 5
+    // blocks it hovers over can be hit too.
+    public static final RegistryObject<EntityType<UniversalDestroyer>> UNIVERSAL_DESTROYER = ENTITY_TYPES.register("universal_destroyer",
+        () -> EntityType.Builder.<UniversalDestroyer>of(UniversalDestroyer::new, MobCategory.MONSTER)
+            .sized(2.25F, 3.5F)
+            .fireImmune()
+            .clientTrackingRange(20)
+            .updateInterval(2)
+            .build(ENTITY_TYPES.key("universal_destroyer"))
+    );
+
+    // Spawn egg for the Universal Destroyer (for testing - normally it's summoned with a Void Seal)
+    public static final RegistryObject<Item> UNIVERSAL_DESTROYER_SPAWN_EGG = ITEMS.register("universal_destroyer_spawn_egg",
+        () -> new SpawnEggItem(
+            UNIVERSAL_DESTROYER.get(),
+            new Item.Properties().setId(ITEMS.key("universal_destroyer_spawn_egg"))
+        )
+    );
+
+    // The Void Seal - dropped by the Living Void. Break it to summon the Universal Destroyer
+    // (see VoidSealBlock). Glows, and can't be blown up or pushed.
+    public static final RegistryObject<Block> VOID_SEAL = BLOCKS.register("void_seal",
+        () -> new VoidSealBlock(
+            BlockBehaviour.Properties.of()
+                .setId(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(MOD_ID, "void_seal")))
+                .strength(5.0f, 3600000.0f)
+                .lightLevel(state -> 10)
+                .noLootTable()
+                .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)
+                .sound(net.minecraft.world.level.block.SoundType.SCULK_CATALYST)
+        )
+    );
+
+    // The Destroyer's broken blade, planted in the ground as a ramp up to its face (see
+    // UniversalDestroyer.buildRamp). Solid stairs, so you can run up it. Can't be mined, drops
+    // nothing, and disappears when the fight moves on.
+    public static final RegistryObject<Block> DESTROYER_SWORD_FRAGMENT = BLOCKS.register("destroyer_sword_fragment",
+        () -> new net.minecraft.world.level.block.StairBlock(
+            net.minecraft.world.level.block.Blocks.POLISHED_BLACKSTONE.defaultBlockState(),
+            BlockBehaviour.Properties.of()
+                .setId(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(MOD_ID, "destroyer_sword_fragment")))
+                .strength(-1.0f, 3600000.0f)
+                .lightLevel(state -> 6)
+                .noLootTable()
+                .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)
+                .sound(net.minecraft.world.level.block.SoundType.NETHERITE_BLOCK)
+        )
+    );
+
+    public static final RegistryObject<Item> VOID_SEAL_ITEM = ITEMS.register("void_seal",
+        () -> new BlockItem(VOID_SEAL.get(), new Item.Properties()
+            .setId(ITEMS.key("void_seal"))
+            .useBlockDescriptionPrefix()
+            .rarity(Rarity.EPIC)
+            .stacksTo(1)
+        )
+    );
+
+    // The Destroyer's Crown - the Universal Destroyer's trophy. A strong, unbreakable helmet with
+    // no special powers, just a purple glow (see DestroyersCrownItem).
+    public static final RegistryObject<Item> DESTROYERS_CROWN = ITEMS.register("destroyers_crown",
+        () -> new DestroyersCrownItem(
+            new Item.Properties()
+                .setId(ITEMS.key("destroyers_crown"))
+                .rarity(Rarity.EPIC)
+                .stacksTo(1)
+                .component(DataComponents.UNBREAKABLE, Unit.INSTANCE)
+                .component(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true)
+                .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.HEAD)
+                    .setEquipSound(SoundEvents.ARMOR_EQUIP_NETHERITE)
+                    .setAsset(net.minecraft.resources.ResourceKey.create(EquipmentAssets.ROOT_ID,
+                        ResourceLocation.fromNamespaceAndPath(MOD_ID, "destroyers_crown")))
+                    .build()
+                )
+                .attributes(ItemAttributeModifiers.builder()
+                    .add(
+                        Attributes.ARMOR,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("destroyers_crown_armor"),
+                            30.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.HEAD
+                    )
+                    .add(
+                        Attributes.ARMOR_TOUGHNESS,
+                        new AttributeModifier(
+                            ResourceLocation.withDefaultNamespace("destroyers_crown_toughness"),
+                            10.0,
+                            AttributeModifier.Operation.ADD_VALUE
+                        ),
+                        EquipmentSlotGroup.HEAD
+                    )
+                    .build()
+                )
+        )
+    );
+
     // Monstrosity Heart - the trophy the Infinitite Monstrosity drops
     public static final RegistryObject<Item> MONSTROSITY_HEART = ITEMS.register("monstrosity_heart",
         () -> new MonstrosityHeartItem(new Item.Properties()
@@ -1037,6 +1137,9 @@ public final class ToInfinititeAndBeyond {
             event.accept(INFINITITE_MONSTROSITY_SPAWN_EGG.get());
             event.accept(MONSTROSITY_HEART.get());
             event.accept(LIVING_VOID_SPAWN_EGG.get());
+            event.accept(VOID_SEAL_ITEM.get());
+            event.accept(UNIVERSAL_DESTROYER_SPAWN_EGG.get());
+            event.accept(DESTROYERS_CROWN.get());
         }
     }
 
@@ -1047,6 +1150,7 @@ public final class ToInfinititeAndBeyond {
     public static void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
         event.put(INFINITITE_MONSTROSITY.get(), InfinititeMonstrosity.createAttributes().build());
         event.put(LIVING_VOID.get(), LivingVoid.createAttributes().build());
+        event.put(UNIVERSAL_DESTROYER.get(), UniversalDestroyer.createAttributes().build());
     }
 
     // You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent
@@ -1094,6 +1198,7 @@ public final class ToInfinititeAndBeyond {
             event.registerEntityRenderer(MONSTROSITY_ROCK.get(), context -> new ThrownItemRenderer<>(context, 3.0f, true));
             event.registerEntityRenderer(LIVING_VOID.get(), LivingVoidRenderer::new);
             event.registerEntityRenderer(VOID_ORB.get(), NoopRenderer::new);
+            event.registerEntityRenderer(UNIVERSAL_DESTROYER.get(), UniversalDestroyerRenderer::new);
         }
 
         @SubscribeEvent
@@ -1103,6 +1208,7 @@ public final class ToInfinititeAndBeyond {
                 InfinititeMonstrosityModel::createBodyLayer
             );
             event.registerLayerDefinition(LivingVoidRenderer.LAYER_LOCATION, LivingVoidModel::createBodyLayer);
+            event.registerLayerDefinition(UniversalDestroyerRenderer.LAYER_LOCATION, UniversalDestroyerModel::createBodyLayer);
         }
     }
 
@@ -1144,6 +1250,8 @@ public final class ToInfinititeAndBeyond {
             UniversalHelmetItem.tick(player, serverLevel);
             // Universal Core: keeps a god's status, flight, food and god-form look going
             UniversalCoreItem.tick(player, serverLevel);
+            // Destroyer's Crown: its purple glow
+            DestroyersCrownItem.tick(player, serverLevel);
         }
         if (player.level().isClientSide() && player.isLocalPlayer()) {
             // Universal Boots: Liquid Walking has to happen on the wearer's own client, since
@@ -1164,6 +1272,7 @@ public final class ToInfinititeAndBeyond {
         UniversalHelmetItem.tickTimeStops();
         UniversalCoreItem.tickPowers();
         LivingVoid.tickRituals();
+        UniversalDestroyer.tickRitualsAndEndings();
     }
 
     /**

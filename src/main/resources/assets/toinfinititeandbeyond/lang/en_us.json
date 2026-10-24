@@ -36,5 +36,11 @@
   "entity.toinfinititeandbeyond.living_void": "The Living Void",
   "entity.toinfinititeandbeyond.void_orb": "Void Orb",
   "item.toinfinititeandbeyond.living_void_spawn_egg": "Living Void Spawn Egg",
-  "item.toinfinititeandbeyond.infinitite_monstrosity_spawn_egg": "Infinitite Monstrosity Spawn Egg"
+  "item.toinfinititeandbeyond.infinitite_monstrosity_spawn_egg": "Infinitite Monstrosity Spawn Egg",
+  "entity.toinfinititeandbeyond.universal_destroyer": "The Universal Destroyer",
+  "entity.toinfinititeandbeyond.universal_destroyer.enraged": "The Universal Destroyer - Annihilation",
+  "item.toinfinititeandbeyond.universal_destroyer_spawn_egg": "Universal Destroyer Spawn Egg",
+  "block.toinfinititeandbeyond.void_seal": "Void Seal",
+  "item.toinfinititeandbeyond.destroyers_crown": "Destroyer's Crown",
+  "block.toinfinititeandbeyond.destroyer_sword_fragment": "Destroyer's Broken Blade"
 }
