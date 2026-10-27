@@ -1,0 +1,9 @@
+{
+  "variants": {
+    "thickness=base": { "model": "toinfinititeandbeyond:block/infinitite_spike_base" },
+    "thickness=frustum": { "model": "toinfinititeandbeyond:block/infinitite_spike_middle" },
+    "thickness=middle": { "model": "toinfinititeandbeyond:block/infinitite_spike_middle" },
+    "thickness=tip": { "model": "toinfinititeandbeyond:block/infinitite_spike_tip" },
+    "thickness=tip_merge": { "model": "toinfinititeandbeyond:block/infinitite_spike_tip" }
+  }
+}

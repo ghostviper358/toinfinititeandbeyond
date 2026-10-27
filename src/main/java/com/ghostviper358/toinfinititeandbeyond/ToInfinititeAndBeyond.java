@@ -426,6 +426,23 @@ public final class ToInfinititeAndBeyond {
         )
     );
 
+    // The purple spikes the Black Hole Arm Cannon's spike attack grows out of the ground (see
+    // CannonSpikes). Shaped like pointed dripstone, can be walked into (and hurt when you do),
+    // glow a little, can't be mined, drop nothing, and crumble away by themselves.
+    public static final RegistryObject<Block> INFINITITE_SPIKE = BLOCKS.register("infinitite_spike",
+        () -> new InfinititeSpikeBlock(
+            BlockBehaviour.Properties.of()
+                .setId(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(MOD_ID, "infinitite_spike")))
+                .strength(-1.0f, 3600000.0f)
+                .noCollission()
+                .noOcclusion()
+                .noLootTable()
+                .lightLevel(state -> 6)
+                .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)
+                .sound(net.minecraft.world.level.block.SoundType.AMETHYST_CLUSTER)
+        )
+    );
+
     // The homing blocks the Black Hole Arm Cannon fires (drawn as Void Blocks - see onRegisterRenderers)
     public static final RegistryObject<EntityType<CannonBlockEntity>> CANNON_BLOCK = ENTITY_TYPES.register("cannon_block",
         () -> EntityType.Builder.<CannonBlockEntity>of(CannonBlockEntity::new, MobCategory.MISC)
@@ -1205,6 +1222,9 @@ public final class ToInfinititeAndBeyond {
             TickEvent.ClientTickEvent.Post.BUS.addListener(BlackHoleArmCannonClientHandler::onClientTick);
             InputEvent.InteractionKeyMappingTriggered.BUS.addListener((java.util.function.Predicate<InputEvent.InteractionKeyMappingTriggered>) BlackHoleArmCannonClientHandler::onInteractionKey);
             ComputeFovModifierEvent.BUS.addListener(BlackHoleArmCannonClientHandler::onComputeFov);
+            // Its spikes have see-through gaps around them, like pointed dripstone.
+            net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(INFINITITE_SPIKE.get(),
+                net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT);
         }
 
         @SubscribeEvent
@@ -1306,6 +1326,7 @@ public final class ToInfinititeAndBeyond {
         UniversalCoreItem.tickPowers();
         LivingVoid.tickRituals();
         UniversalDestroyer.tickRitualsAndEndings();
+        CannonSpikes.tick();
     }
 
     /**

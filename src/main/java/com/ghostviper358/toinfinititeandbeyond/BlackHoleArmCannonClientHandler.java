@@ -11,6 +11,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
 import net.minecraftforge.client.event.ComputeFovModifierEvent;
@@ -28,7 +29,7 @@ import javax.annotation.Nullable;
  *   or mining. Only this client knows the key is held, and aiming changes nothing in the world,
  *   so nothing is sent to the server.
  * - The sight: the normal crosshair is swapped for floating purple pixels that close in on the
- *   middle as you aim. Each attack mode will get its own sight.
+ *   middle as you aim. Each attack mode has its own sight.
  * - Recharging: while a cannon's black hole is refilling it, purple energy streams into the black
  *   hole from all around - for every player holding one, so everyone nearby can see it.
  */
@@ -133,9 +134,8 @@ public final class BlackHoleArmCannonClientHandler {
     }
 
     /**
-     * Attack Mode 1 (Homing Blocks): four floating pixels slowly circling the middle of the
-     * screen, bobbing in and out, with a dot in the middle. Aiming pulls them in tight and makes
-     * them brighter. While the black hole is recharging, they go dim and drift wide.
+     * Each attack mode has its own sight made of floating pixels. Aiming pulls the pixels in tight
+     * and makes them brighter. While the black hole is recharging, they go dim and drift wide.
      */
     private static void renderSight(GuiGraphics graphics, DeltaTracker deltaTracker) {
         if (!showSight()) {
@@ -143,13 +143,27 @@ public final class BlackHoleArmCannonClientHandler {
         }
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
+        ItemStack cannon = player.getItemInHand(cannonHand(player));
         float partialTick = deltaTracker.getGameTimeDeltaPartialTick(true);
         float aimed = aimProgress(partialTick);
-        boolean recharging = BlackHoleArmCannonItem.isRecharging(player.getItemInHand(cannonHand(player)));
-
+        float time = (player.tickCount + partialTick) / 20.0f;
+        boolean recharging = BlackHoleArmCannonItem.isRecharging(cannon);
         int cx = graphics.guiWidth() / 2;
         int cy = graphics.guiHeight() / 2;
-        float time = (player.tickCount + partialTick) / 20.0f;
+
+        switch (BlackHoleArmCannonItem.getMode(cannon)) {
+            case HOMING_BLOCKS -> renderHomingBlocksSight(graphics, cx, cy, time, aimed, recharging);
+            case SPIKES -> {
+                long readyAt = BlackHoleArmCannonItem.getSpikesReadyAt(cannon);
+                float cooldown = Mth.clamp((readyAt - minecraft.level.getGameTime() - partialTick)
+                    / BlackHoleArmCannonItem.SPIKE_COOLDOWN_TICKS, 0.0f, 1.0f);
+                renderSpikesSight(graphics, cx, cy, time, aimed, recharging, cooldown);
+            }
+        }
+    }
+
+    /** Mode 1 (Homing Blocks): four floating pixels slowly circling the middle, bobbing in and out, with a dot in the middle. */
+    private static void renderHomingBlocksSight(GuiGraphics graphics, int cx, int cy, float time, float aimed, boolean recharging) {
         float radius = Mth.lerp(aimed, 11.0f, 5.0f) + Mth.sin(time * 4.0f) * 1.2f + (recharging ? 6.0f : 0.0f);
         int brightness = recharging ? 0x60 : (int) Mth.lerp(aimed, 0xB0, 0xFF);
         int pixel = ARGB.color(brightness, 0xD0, 0x60, 0xFF);
@@ -162,6 +176,32 @@ public final class BlackHoleArmCannonClientHandler {
             graphics.fill(px - 1, py - 1, px + 1, py + 1, pixel);
         }
         graphics.fill(cx, cy, cx + 1, cy + 1, middle);
+    }
+
+    /**
+     * Mode 2 (Infinitite Spikes): eight pixels in a ring, like the ring of spikes, each one
+     * popping upward in turn so a wave runs around it, with a bigger pixel in the middle for the
+     * big spike. While the spikes are cooling down, the ring goes dim and slowly fills back in.
+     */
+    private static void renderSpikesSight(GuiGraphics graphics, int cx, int cy, float time, float aimed,
+                                          boolean recharging, float cooldown) {
+        float radius = Mth.lerp(aimed, 14.0f, 8.0f) + (recharging ? 6.0f : 0.0f);
+        boolean dim = recharging || cooldown > 0.0f;
+        int brightness = dim ? 0x60 : (int) Mth.lerp(aimed, 0xB0, 0xFF);
+        int pixel = ARGB.color(brightness, 0xC0, 0x50, 0xFF);
+        int ready = ARGB.color((int) Mth.lerp(aimed, 0xB0, 0xFF), 0xC0, 0x50, 0xFF);
+        int middle = ARGB.color(brightness, 0xFF, 0xB0, 0xFF);
+        // While cooling down, this many of the eight pixels have filled back in at full brightness.
+        int filled = recharging ? 0 : Math.round((1.0f - cooldown) * 8);
+
+        for (int i = 0; i < 8; i++) {
+            float angle = i * Mth.TWO_PI / 8 - Mth.HALF_PI;
+            float pop = Math.max(0.0f, Mth.sin(time * 6.0f - i * 0.8f)) * 3.0f;
+            int px = cx + Math.round(Mth.cos(angle) * radius);
+            int py = cy + Math.round(Mth.sin(angle) * radius - pop);
+            graphics.fill(px - 1, py - 1, px + 1, py + 1, cooldown > 0.0f && i < filled ? ready : pixel);
+        }
+        graphics.fill(cx - 1, cy - 1, cx + 1, cy + 1, middle);
     }
 
     // --- Recharging ---

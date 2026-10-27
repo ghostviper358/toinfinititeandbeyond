@@ -35,6 +35,18 @@ The Black Hole Arm Cannon is an extremely powerful late-game weapon that fits ov
 - 8 damage on a direct hit + 4 splash damage within 2 blocks (no block breaking)
 - Locks on to whatever's closest to the crosshair (up to 128 blocks away), flies up to 1000 blocks
 
+### Switching Modes
+- Sneak + right-click switches to the next attack mode (shows the mode name above the hotbar)
+- Each mode has its own floating-pixel sight
+
+### Mode 2: Infinitite Spikes - DONE
+- Right-click: after a 0.5 second warning (purple sparks on the ground), a ring of purple spikes bursts out of the ground under what you're aiming at (up to 64 blocks away)
+- One big spike (4 tall) in the middle and 8 smaller ones (2 tall) around it - about 5 blocks wide
+- 40 damage to everything caught in the eruption, and they get thrown into the air
+- Costs 15 ammo, one attack every 2 seconds
+- The spikes stay for 3 seconds (walking into them hurts, 4 damage), then crumble into purple dust
+- Sight: 8 pixels in a ring with a wave running around it; dims while cooling down
+
 ## Basic Properties
 - **Equipment Slot**: Worn on the arm, fits over the player's hand
 - **Appearance**: TBD (texture to be designed later)
