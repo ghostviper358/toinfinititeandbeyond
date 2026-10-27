@@ -583,6 +583,10 @@ public class LivingVoid extends GiantBoss {
                 }
             }
             minions.clear();
+            // Everyone who fought it unlocks the Black Hole Arm Cannon's Black Hole mode.
+            for (Player fighter : level.getEntitiesOfClass(Player.class, this.getBoundingBox().inflate(64.0))) {
+                BlackHoleArmCannonItem.unlockBlackHole(fighter);
+            }
             level.sendParticles(ParticleTypes.SQUID_INK, true, true, this.getX(), this.getY() + 2.0, this.getZ(), 300, 4.0, 4.0, 4.0, 0.2);
             level.sendParticles(ParticleTypes.FLASH, true, true, this.getX(), this.getY() + 2.0, this.getZ(), 1, 0, 0, 0, 0);
         }

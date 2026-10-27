@@ -47,6 +47,16 @@ The Black Hole Arm Cannon is an extremely powerful late-game weapon that fits ov
 - The spikes stay for 3 seconds (walking into them hurts, 4 damage), then crumble into purple dust
 - Sight: 8 pixels in a ring with a wave running around it; dims while cooling down
 
+### Mode 3: Black Hole - DONE
+- **Unlock**: beat the Living Void (every player within 64 blocks when it dies unlocks it for good). Always available in creative. Locked modes are skipped when switching.
+- Right-click: a black hole appears where you're aiming (up to 48 blocks away) and lasts 5 seconds
+- Pulls in mobs, players and dropped items within 16 blocks, spiralling them into the middle. Only pulls YOU if you're within 8 blocks of it
+- Keeps hurting: 10 damage every half second to everything in the middle (5x5x5)
+- Always eats the blocks around it (grows out to 3.5 blocks) - not bedrock/unbreakable blocks, liquids, or blocks that hold items like chests. Every block eaten = 1 ammo back into your cannon
+- Costs 30 ammo, one every 6 seconds
+- Looks like the cannon's little black hole, only big: black core, see-through purple shell, energy streaming in
+- Sight: pixels spiralling into a dark hollow middle
+
 ## Basic Properties
 - **Equipment Slot**: Worn on the arm, fits over the player's hand
 - **Appearance**: TBD (texture to be designed later)

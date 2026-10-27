@@ -43,6 +43,10 @@ import java.util.function.Consumer;
  * - Mode 2, Infinitite Spikes: right-click to make a ring of purple spikes burst out of the
  *   ground under what you're aiming at (see {@link CannonSpikes}). Huge hits, slow, and costs a
  *   quarter of the ammo.
+ * - Mode 3, Black Hole: right-click to fire a black hole where you're aiming. For 5 seconds it
+ *   pulls everything in, keeps hurting whatever reaches the middle, and eats the blocks around
+ *   it, turning them into ammo (see {@link CannonBlackHole}). Costs half the ammo. Locked until
+ *   you beat the Living Void (always available in creative).
  *
  * Ammo: {@link #MAX_AMMO} shots, stored on the item. Every shot uses one. Ammo slowly
  * refills by itself whenever you aren't firing, so you can never run out for good, but you
@@ -67,28 +71,34 @@ public class BlackHoleArmCannonItem extends Item implements GeoItem {
     /** How far away the cannon can lock on to a target. */
     private static final double LOCK_ON_RANGE = 128.0;
 
-    /** Spikes cost this much ammo, and can be fired once every {@link #SPIKE_COOLDOWN_TICKS} (2 seconds). */
-    private static final int SPIKE_AMMO_COST = 15;
-    public static final int SPIKE_COOLDOWN_TICKS = 40;
-
     private static final String AMMO_KEY = "Ammo";
     private static final String RECHARGING_KEY = "Recharging";
     private static final String MODE_KEY = "Mode";
-    private static final String SPIKES_READY_KEY = "SpikesReadyAt";
+    private static final String READY_AT_KEY_SUFFIX = "ReadyAt";
+    /** Player data (kept through death) that says they've unlocked the Black Hole mode. */
+    private static final String BLACK_HOLE_UNLOCKED_KEY = ToInfinititeAndBeyond.MOD_ID + "_black_hole_unlocked";
     private static final int AMMO_BAR_COLOR = 0xB040FF; // purple
     private static final int RECHARGE_BAR_COLOR = 0xFF55FF; // bright pink while the black hole refills it
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
-    /** The cannon's attack modes, in the order sneak + right-click goes through them. */
+    /**
+     * The cannon's attack modes, in the order sneak + right-click goes through them. Each has its
+     * own ammo cost per shot and how long (in ticks) before it can be fired again.
+     */
     public enum Mode {
-        HOMING_BLOCKS("Homing Blocks"),
-        SPIKES("Infinitite Spikes");
+        HOMING_BLOCKS("Homing Blocks", 1, 0),
+        SPIKES("Infinitite Spikes", 15, 40),
+        BLACK_HOLE("Black Hole", 30, 120);
 
         public final String title;
+        public final int ammoCost;
+        public final int cooldownTicks;
 
-        Mode(String title) {
+        Mode(String title, int ammoCost, int cooldownTicks) {
             this.title = title;
+            this.ammoCost = ammoCost;
+            this.cooldownTicks = cooldownTicks;
         }
 
         Mode next() {
@@ -144,13 +154,52 @@ public class BlackHoleArmCannonItem extends Item implements GeoItem {
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putInt(MODE_KEY, mode.ordinal()));
     }
 
-    /** The game time the spikes can next be fired. */
-    public static long getSpikesReadyAt(ItemStack stack) {
-        return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getLongOr(SPIKES_READY_KEY, 0L);
+    /** The game time a mode can next be fired. */
+    public static long getReadyAt(ItemStack stack, Mode mode) {
+        return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getLongOr(mode.name() + READY_AT_KEY_SUFFIX, 0L);
     }
 
-    private static void setSpikesReadyAt(ItemStack stack, long gameTime) {
-        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putLong(SPIKES_READY_KEY, gameTime));
+    private static void setReadyAt(ItemStack stack, Mode mode, long gameTime) {
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putLong(mode.name() + READY_AT_KEY_SUFFIX, gameTime));
+    }
+
+    /**
+     * Adds ammo to the cannon the player is holding (main hand first) - used by the black hole as
+     * it eats blocks. Refilling it all the way also finishes a recharge.
+     */
+    public static void feedAmmo(Player player, int amount) {
+        for (InteractionHand hand : InteractionHand.values()) {
+            ItemStack stack = player.getItemInHand(hand);
+            if (stack.getItem() instanceof BlackHoleArmCannonItem) {
+                int ammo = Math.min(MAX_AMMO, getAmmo(stack) + amount);
+                setAmmo(stack, ammo);
+                if (ammo >= MAX_AMMO && isRecharging(stack)) {
+                    setRecharging(stack, false);
+                }
+                return;
+            }
+        }
+    }
+
+    // --- Black Hole unlock ---
+
+    public static boolean isBlackHoleUnlocked(Player player) {
+        return player.getAbilities().instabuild || player.getPersistentData().getBooleanOr(BLACK_HOLE_UNLOCKED_KEY, false);
+    }
+
+    /** Called for every player nearby when the Living Void is beaten. */
+    public static void unlockBlackHole(Player player) {
+        if (player.getPersistentData().getBooleanOr(BLACK_HOLE_UNLOCKED_KEY, false)) {
+            return;
+        }
+        player.getPersistentData().putBoolean(BLACK_HOLE_UNLOCKED_KEY, true);
+        player.displayClientMessage(Component.literal("§5§lBlack Hole mode unlocked! §dSneak + right-click with the Black Hole Arm Cannon to use it."), false);
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+            SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 0.6f, 1.4f);
+    }
+
+    private static boolean canUse(Player player, Mode mode) {
+        return mode != Mode.BLACK_HOLE || isBlackHoleUnlocked(player);
     }
 
     /** True while the black hole is refilling an emptied cannon (it can't fire until it's full). */
@@ -213,8 +262,16 @@ public class BlackHoleArmCannonItem extends Item implements GeoItem {
             stillRecharging(level, player);
             return InteractionResult.FAIL;
         }
-        if (getMode(stack) == Mode.SPIKES) {
-            return fireSpikes(level, player, stack);
+        Mode mode = getMode(stack);
+        if (mode == Mode.SPIKES) {
+            return fireOnce(level, player, stack, mode);
+        }
+        if (mode == Mode.BLACK_HOLE) {
+            if (!canUse(player, mode)) {
+                player.displayClientMessage(Component.literal("§8Black Hole is locked - beat the Living Void to unlock it"), true);
+                return InteractionResult.FAIL;
+            }
+            return fireOnce(level, player, stack, mode);
         }
         player.startUsingItem(hand);
         return InteractionResult.CONSUME;
@@ -224,43 +281,52 @@ public class BlackHoleArmCannonItem extends Item implements GeoItem {
         if (level.isClientSide()) {
             return;
         }
+        // Skip modes the player hasn't unlocked yet, and say so.
         Mode mode = getMode(stack).next();
+        String locked = "";
+        while (!canUse(player, mode)) {
+            locked += " §8(" + mode.title + " locked - beat the Living Void)";
+            mode = mode.next();
+        }
         setMode(stack, mode);
-        player.displayClientMessage(Component.literal("§5Mode: §d" + mode.title), true);
+        player.displayClientMessage(Component.literal("§5Mode: §d" + mode.title + locked), true);
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
             SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 0.5f, 1.2f + mode.ordinal() * 0.3f);
     }
 
     /**
-     * Mode 2: one ring of spikes per click. Holding right-click keeps trying every few ticks, so
-     * while the spikes are cooling down this just quietly does nothing.
+     * The one-shot-per-click modes (Spikes and Black Hole). Holding right-click keeps trying every
+     * few ticks, so while the mode is cooling down this just quietly does nothing.
      */
-    private static InteractionResult fireSpikes(Level level, Player player, ItemStack stack) {
-        if (level.getGameTime() < getSpikesReadyAt(stack)) {
+    private static InteractionResult fireOnce(Level level, Player player, ItemStack stack, Mode mode) {
+        if (level.getGameTime() < getReadyAt(stack, mode)) {
             return InteractionResult.FAIL;
         }
         int ammo = getAmmo(stack);
         boolean free = player.getAbilities().instabuild;
-        if (ammo < SPIKE_AMMO_COST && !free) {
-            player.displayClientMessage(Component.literal("§cSpikes need " + SPIKE_AMMO_COST + " ammo §7(" + ammo + "/" + MAX_AMMO + ")"), true);
+        if (ammo < mode.ammoCost && !free) {
+            player.displayClientMessage(Component.literal("§c" + mode.title + " needs " + mode.ammoCost + " ammo §7(" + ammo + "/" + MAX_AMMO + ")"), true);
             return InteractionResult.FAIL;
         }
         if (!(level instanceof ServerLevel serverLevel)) {
             return InteractionResult.SUCCESS;
         }
-        if (!CannonSpikes.fire(serverLevel, player)) {
+        if (mode == Mode.SPIKES && !CannonSpikes.fire(serverLevel, player)) {
             player.displayClientMessage(Component.literal("§7No ground there for spikes to grow from"), true);
             return InteractionResult.FAIL;
         }
-        setSpikesReadyAt(stack, level.getGameTime() + SPIKE_COOLDOWN_TICKS);
+        if (mode == Mode.BLACK_HOLE) {
+            CannonBlackHole.fire(serverLevel, player);
+        }
+        setReadyAt(stack, mode, level.getGameTime() + mode.cooldownTicks);
         if (!free) {
-            ammo -= SPIKE_AMMO_COST;
+            ammo -= mode.ammoCost;
             setAmmo(stack, ammo);
         }
         if (ammo <= 0) {
             startRecharging(level, player, stack);
         } else {
-            player.displayClientMessage(Component.literal("§5" + Mode.SPIKES.title + " §7- §d" + ammo + "§7/" + MAX_AMMO), true);
+            player.displayClientMessage(Component.literal("§5" + mode.title + " §7- §d" + ammo + "§7/" + MAX_AMMO), true);
         }
         return InteractionResult.SUCCESS;
     }

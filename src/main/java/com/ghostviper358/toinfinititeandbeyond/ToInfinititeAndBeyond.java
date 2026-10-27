@@ -426,6 +426,17 @@ public final class ToInfinititeAndBeyond {
         )
     );
 
+    // The black hole the Black Hole Arm Cannon's Black Hole mode fires (see CannonBlackHole).
+    // Drawn by CannonBlackHoleRenderer.
+    public static final RegistryObject<EntityType<CannonBlackHole>> CANNON_BLACK_HOLE = ENTITY_TYPES.register("cannon_black_hole",
+        () -> EntityType.Builder.<CannonBlackHole>of(CannonBlackHole::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .fireImmune()
+            .clientTrackingRange(8)
+            .updateInterval(10)
+            .build(ENTITY_TYPES.key("cannon_black_hole"))
+    );
+
     // The purple spikes the Black Hole Arm Cannon's spike attack grows out of the ground (see
     // CannonSpikes). Shaped like pointed dripstone, can be walked into (and hurt when you do),
     // glow a little, can't be mined, drop nothing, and crumble away by themselves.
@@ -1251,6 +1262,7 @@ public final class ToInfinititeAndBeyond {
             event.registerEntityRenderer(LIVING_VOID.get(), LivingVoidRenderer::new);
             event.registerEntityRenderer(VOID_ORB.get(), NoopRenderer::new);
             event.registerEntityRenderer(CANNON_BLOCK.get(), context -> new ThrownItemRenderer<>(context, 1.5f, true));
+            event.registerEntityRenderer(CANNON_BLACK_HOLE.get(), CannonBlackHoleRenderer::new);
             event.registerEntityRenderer(UNIVERSAL_DESTROYER.get(), UniversalDestroyerRenderer::new);
         }
 

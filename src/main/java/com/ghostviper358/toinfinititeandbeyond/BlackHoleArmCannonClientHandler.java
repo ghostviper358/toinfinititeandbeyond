@@ -153,13 +153,17 @@ public final class BlackHoleArmCannonClientHandler {
 
         switch (BlackHoleArmCannonItem.getMode(cannon)) {
             case HOMING_BLOCKS -> renderHomingBlocksSight(graphics, cx, cy, time, aimed, recharging);
-            case SPIKES -> {
-                long readyAt = BlackHoleArmCannonItem.getSpikesReadyAt(cannon);
-                float cooldown = Mth.clamp((readyAt - minecraft.level.getGameTime() - partialTick)
-                    / BlackHoleArmCannonItem.SPIKE_COOLDOWN_TICKS, 0.0f, 1.0f);
-                renderSpikesSight(graphics, cx, cy, time, aimed, recharging, cooldown);
-            }
+            case SPIKES -> renderSpikesSight(graphics, cx, cy, time, aimed, recharging,
+                cooldown(cannon, BlackHoleArmCannonItem.Mode.SPIKES, partialTick));
+            case BLACK_HOLE -> renderBlackHoleSight(graphics, cx, cy, time, aimed, recharging,
+                cooldown(cannon, BlackHoleArmCannonItem.Mode.BLACK_HOLE, partialTick));
         }
+    }
+
+    /** How much of a mode's cooldown is left, from 1 (just fired) to 0 (ready). */
+    private static float cooldown(ItemStack cannon, BlackHoleArmCannonItem.Mode mode, float partialTick) {
+        long readyAt = BlackHoleArmCannonItem.getReadyAt(cannon, mode);
+        return Mth.clamp((readyAt - Minecraft.getInstance().level.getGameTime() - partialTick) / mode.cooldownTicks, 0.0f, 1.0f);
     }
 
     /** Mode 1 (Homing Blocks): four floating pixels slowly circling the middle, bobbing in and out, with a dot in the middle. */
@@ -202,6 +206,33 @@ public final class BlackHoleArmCannonClientHandler {
             graphics.fill(px - 1, py - 1, px + 1, py + 1, cooldown > 0.0f && i < filled ? ready : pixel);
         }
         graphics.fill(cx - 1, cy - 1, cx + 1, cy + 1, middle);
+    }
+
+    /**
+     * Mode 3 (Black Hole): pixels spiralling in toward a dark hollow square in the middle, like
+     * things being sucked into a black hole. While cooling down, the spiral slows and dims.
+     */
+    private static void renderBlackHoleSight(GuiGraphics graphics, int cx, int cy, float time, float aimed,
+                                             boolean recharging, float cooldown) {
+        boolean dim = recharging || cooldown > 0.0f;
+        int brightness = dim ? 0x60 : (int) Mth.lerp(aimed, 0xB0, 0xFF);
+        float size = Mth.lerp(aimed, 1.0f, 0.6f) + (recharging ? 0.5f : 0.0f);
+        float speed = dim ? 0.3f : 1.0f;
+        int pixels = 10;
+        for (int i = 0; i < pixels; i++) {
+            // Each pixel slides inward along the spiral, then starts again at the outside.
+            float along = (time * speed * 0.6f + i / (float) pixels) % 1.0f;
+            float radius = (4.0f + 14.0f * (1.0f - along)) * size;
+            float angle = along * Mth.TWO_PI * 1.5f + i * (Mth.TWO_PI / 2);
+            int fade = (int) (brightness * Mth.clamp(along * 3.0f, 0.3f, 1.0f));
+            int px = cx + Math.round(Mth.cos(angle) * radius);
+            int py = cy + Math.round(Mth.sin(angle) * radius);
+            graphics.fill(px - 1, py - 1, px + 1, py + 1, ARGB.color(fade, 0xB0, 0x40, 0xFF));
+        }
+        // The hole: a dark middle with a purple edge.
+        int edge = ARGB.color(brightness, 0xE0, 0x90, 0xFF);
+        graphics.fill(cx - 2, cy - 2, cx + 3, cy + 3, edge);
+        graphics.fill(cx - 1, cy - 1, cx + 2, cy + 2, ARGB.color(0xE0, 0x05, 0x00, 0x0A));
     }
 
     // --- Recharging ---
