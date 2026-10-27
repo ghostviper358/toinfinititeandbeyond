@@ -1,5 +1,6 @@
 package com.ghostviper358.toinfinititeandbeyond;
 
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
@@ -8,7 +9,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
+
+import javax.annotation.Nullable;
 
 /**
  * Infinitite Armor - Ultimate protection with permanent buffs and damage reflection
@@ -27,8 +29,9 @@ public class InfinititeArmorItem extends Item {
         super(properties);
     }
 
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-        if (!level.isClientSide && entity instanceof Player player) {
+    @Override
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, @Nullable EquipmentSlot slot) {
+        if (entity instanceof Player player) {
             // Only apply effects if wearing the chest plate in the chest slot
             ItemStack chestSlot = player.getItemBySlot(EquipmentSlot.CHEST);
             if (chestSlot == stack) {

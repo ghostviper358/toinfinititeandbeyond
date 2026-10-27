@@ -9,9 +9,9 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -35,8 +35,9 @@ public class InfinititeLeggingsItem extends Item {
         return player.getItemBySlot(EquipmentSlot.LEGS).getItem() instanceof InfinititeLeggingsItem;
     }
 
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-        if (level.isClientSide || !(entity instanceof Player player)) return;
+    @Override
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, @Nullable EquipmentSlot slot) {
+        if (!(entity instanceof Player player)) return;
         if (!isWearing(player)) return;
 
         // SPEED DEMON: auto-sprint when moving and not sneaking
@@ -53,8 +54,8 @@ public class InfinititeLeggingsItem extends Item {
         }
 
         // SPEED DEMON: purple particle trail when sprinting
-        if (player.isSprinting() && level instanceof ServerLevel serverLevel) {
-            serverLevel.sendParticles(ParticleTypes.DRAGON_BREATH,
+        if (player.isSprinting()) {
+            level.sendParticles(ParticleTypes.DRAGON_BREATH,
                 player.getX(), player.getY() + 0.1, player.getZ(),
                 3, 0.25, 0.05, 0.25, 0.01);
         }

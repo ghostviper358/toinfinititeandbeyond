@@ -11,10 +11,10 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -36,10 +36,10 @@ public class VoidBootsItem extends Item {
         return player.getItemBySlot(EquipmentSlot.FEET).getItem() instanceof VoidBootsItem;
     }
 
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-        if (level.isClientSide || !(entity instanceof Player player)) return;
+    @Override
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, @Nullable EquipmentSlot slot) {
+        if (!(entity instanceof Player player)) return;
         if (player.getItemBySlot(EquipmentSlot.FEET) != stack) return;
-        if (!(level instanceof ServerLevel serverLevel)) return;
 
         int tick = player.tickCount;
 
@@ -49,13 +49,13 @@ public class VoidBootsItem extends Item {
 
         // VOID CREEP: particle trail + Slowness/Weakness aura
         if (tick % 3 == 0 && player.getDeltaMovement().horizontalDistanceSqr() > 0.001) {
-            serverLevel.sendParticles(ParticleTypes.SCULK_CHARGE_POP,
+            level.sendParticles(ParticleTypes.SCULK_CHARGE_POP,
                 player.getX(), player.getY() + 0.1, player.getZ(),
                 2, 0.2, 0.05, 0.2, 0.0);
         }
 
         AABB creepBox = player.getBoundingBox().inflate(4.0);
-        serverLevel.getEntitiesOfClass(LivingEntity.class, creepBox, e -> e != player && e.isAlive())
+        level.getEntitiesOfClass(LivingEntity.class, creepBox, e -> e != player && e.isAlive())
             .forEach(mob -> {
                 MobEffectInstance slow = mob.getEffect(MobEffects.SLOWNESS);
                 if (slow == null || slow.getDuration() < 20) {
@@ -70,17 +70,17 @@ public class VoidBootsItem extends Item {
         // SOUL DRAIN STEP: steal 3 HP from nearest enemy every 40 ticks
         if (tick % 40 == 0) {
             AABB soulBox = player.getBoundingBox().inflate(6.0);
-            List<LivingEntity> targets = serverLevel.getEntitiesOfClass(LivingEntity.class, soulBox,
+            List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, soulBox,
                 e -> e != player && e.isAlive());
             targets.stream()
                 .min((a, b) -> Double.compare(a.distanceTo(player), b.distanceTo(player)))
                 .ifPresent(target -> {
-                    target.hurt(serverLevel.damageSources().magic(), 3.0f);
+                    target.hurt(level.damageSources().magic(), 3.0f);
                     player.heal(3.0f);
-                    serverLevel.sendParticles(ParticleTypes.SOUL,
+                    level.sendParticles(ParticleTypes.SOUL,
                         target.getX(), target.getY() + 1.0, target.getZ(),
                         8, 0.3, 0.5, 0.3, 0.05);
-                    serverLevel.sendParticles(ParticleTypes.SOUL,
+                    level.sendParticles(ParticleTypes.SOUL,
                         player.getX(), player.getY() + 0.5, player.getZ(),
                         5, 0.2, 0.3, 0.2, 0.03);
                 });

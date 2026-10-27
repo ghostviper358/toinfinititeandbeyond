@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "combat",
+  "pattern": [
+    "S S",
+    "SSS",
+    "SSS"
+  ],
+  "key": {
+    "S": "toinfinititeandbeyond:universal_shard"
+  },
+  "result": {
+    "id": "toinfinititeandbeyond:universal_chestplate",
+    "count": 1
+  }
+}

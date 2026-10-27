@@ -516,6 +516,16 @@ public class UniversalSwordItem extends Item implements GeoItem {
         level.playSound(null, x, caster.getY(), z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 4.0F, 1.0F);
     }
 
+    /**
+     * Forgets everything still in progress. Called when the server stops, so nothing keeps
+     * running against a closed world after you quit to the title screen.
+     */
+    public static void clearAll() {
+        ACTIVE_SHOCKWAVES.clear();
+        ACTIVE_CHARGERS.clear();
+        ACTIVE_SPINS.clear();
+    }
+
     /** Advances every in-flight shockwave by one tick. Called once per server tick. */
     public static void tickActiveShockwaves() {
         if (ACTIVE_SHOCKWAVES.isEmpty()) {

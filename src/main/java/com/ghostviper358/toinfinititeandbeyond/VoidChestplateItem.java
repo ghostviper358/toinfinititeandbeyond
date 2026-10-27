@@ -12,10 +12,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,16 +43,16 @@ public class VoidChestplateItem extends Item {
         return player.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof VoidChestplateItem;
     }
 
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-        if (level.isClientSide || !(entity instanceof Player player)) return;
+    @Override
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, @Nullable EquipmentSlot slot) {
+        if (!(entity instanceof Player player)) return;
         // Only run when this stack is in the chest slot
         if (player.getItemBySlot(EquipmentSlot.CHEST) != stack) return;
-        if (!(level instanceof ServerLevel serverLevel)) return;
 
         // SOUL DRAIN: every second, heal 0.5 hearts per nearby withered enemy
         if (player.tickCount % 20 == 0) {
             AABB box = player.getBoundingBox().inflate(8.0);
-            long witheredCount = serverLevel.getEntitiesOfClass(LivingEntity.class, box,
+            long witheredCount = level.getEntitiesOfClass(LivingEntity.class, box,
                 e -> e != player && e.isAlive() && e.hasEffect(MobEffects.WITHER)).stream().count();
             if (witheredCount > 0) {
                 player.heal((float) witheredCount * 1.0f); // 0.5 hearts per withered enemy
@@ -77,15 +77,15 @@ public class VoidChestplateItem extends Item {
                 double pz2 = player.getZ() + radius * Math.sin(a);
                 double py2 = player.getY() + 1.0 + Math.sin(ticks * 0.3) * 0.4;
 
-                serverLevel.sendParticles(ParticleTypes.PORTAL, px2, py2, pz2, 2, 0.05, 0.05, 0.05, 0.0);
+                level.sendParticles(ParticleTypes.PORTAL, px2, py2, pz2, 2, 0.05, 0.05, 0.05, 0.0);
                 if (ticks > 20) {
-                    serverLevel.sendParticles(ParticleTypes.WITCH, px2, py2, pz2, 1, 0.05, 0.05, 0.05, 0.0);
+                    level.sendParticles(ParticleTypes.WITCH, px2, py2, pz2, 1, 0.05, 0.05, 0.05, 0.0);
                 }
             }
 
             // Rising smoke column while channeling
             if (ticks % 3 == 0) {
-                serverLevel.sendParticles(ParticleTypes.SMOKE,
+                level.sendParticles(ParticleTypes.SMOKE,
                     player.getX(), player.getY() + 0.5 + (ticks / 40.0), player.getZ(),
                     1, 0.1, 0.0, 0.1, 0.01);
             }
@@ -93,14 +93,14 @@ public class VoidChestplateItem extends Item {
             // Half-way pulse: brief darkness flash
             if (ticks == 20) {
                 player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 15, 0, false, false, false));
-                serverLevel.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
+                level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
                     player.getX(), player.getY() + 1.0, player.getZ(),
                     20, 1.0, 0.5, 1.0, 0.08);
             }
 
             if (ticks >= 40) {
                 crouchTicks.put(id, 0);
-                activateVoidHealing(player, serverLevel);
+                activateVoidHealing(player, level);
             }
         } else {
             crouchTicks.put(id, 0);

@@ -92,6 +92,14 @@ public final class VoidLightning {
         return true;
     }
 
+    /**
+     * Forgets everything still in progress. Called when the server stops, so nothing keeps
+     * running against a closed world after you quit to the title screen.
+     */
+    public static void clearAll() {
+        CHAINS.clear();
+    }
+
     /** Advances every chain of jumps by one tick. Called once per server tick. */
     public static void tick() {
         Iterator<Chain> iterator = CHAINS.iterator();

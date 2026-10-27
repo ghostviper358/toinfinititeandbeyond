@@ -11,10 +11,10 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,10 +45,10 @@ public class VoidLeggingsItem extends Item {
         return player.getItemBySlot(EquipmentSlot.LEGS).getItem() instanceof VoidLeggingsItem;
     }
 
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-        if (level.isClientSide || !(entity instanceof Player player)) return;
+    @Override
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, @Nullable EquipmentSlot slot) {
+        if (!(entity instanceof Player player)) return;
         if (player.getItemBySlot(EquipmentSlot.LEGS) != stack) return;
-        if (!(level instanceof ServerLevel serverLevel)) return;
 
         int tick = player.tickCount;
 
@@ -60,11 +60,11 @@ public class VoidLeggingsItem extends Item {
 
         // SHADOW TRAIL: dark particles when moving
         if (tick % 2 == 0 && player.getDeltaMovement().horizontalDistanceSqr() > 0.001) {
-            serverLevel.sendParticles(ParticleTypes.PORTAL,
+            level.sendParticles(ParticleTypes.PORTAL,
                 player.getX(), player.getY() + 0.1, player.getZ(),
                 2, 0.2, 0.1, 0.2, 0.0);
             if (player.isSprinting()) {
-                serverLevel.sendParticles(ParticleTypes.SMOKE,
+                level.sendParticles(ParticleTypes.SMOKE,
                     player.getX(), player.getY() + 0.2, player.getZ(),
                     1, 0.15, 0.05, 0.15, 0.01);
             }
@@ -73,7 +73,7 @@ public class VoidLeggingsItem extends Item {
         // GRAVITY PULL: drag enemies toward player every 10 ticks
         if (tick % 10 == 0) {
             AABB box = player.getBoundingBox().inflate(10.0);
-            serverLevel.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive())
+            level.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive())
                 .forEach(mob -> {
                     Vec3 toPlayer = player.position().subtract(mob.position());
                     double dist = toPlayer.length();
@@ -100,10 +100,10 @@ public class VoidLeggingsItem extends Item {
                     player.teleportTo(candidate.x, candidate.y, candidate.z);
                     lastVoidStep.put(id, tick);
                     // Void step particles at origin and destination
-                    serverLevel.sendParticles(ParticleTypes.PORTAL,
+                    level.sendParticles(ParticleTypes.PORTAL,
                         player.getX(), player.getY() + 1.0, player.getZ(),
                         20, 0.5, 0.5, 0.5, 0.1);
-                    serverLevel.sendParticles(ParticleTypes.WITCH,
+                    level.sendParticles(ParticleTypes.WITCH,
                         player.getX(), player.getY() + 1.0, player.getZ(),
                         10, 0.3, 0.5, 0.3, 0.05);
                     break;

@@ -402,6 +402,15 @@ public class UniversalCoreItem extends Item implements GeoItem {
             SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.0F, 1.2F);
     }
 
+    /**
+     * Forgets everything still in progress. Called when the server stops, so nothing keeps
+     * running against a closed world after you quit to the title screen.
+     */
+    public static void clearAll() {
+        FALLING_METEORS.clear();
+        ACTIVE_STORMS.clear();
+    }
+
     /** Advances falling meteors and lightning storms. Called once per server tick. */
     public static void tickPowers() {
         FALLING_METEORS.removeIf(Meteor::tick);

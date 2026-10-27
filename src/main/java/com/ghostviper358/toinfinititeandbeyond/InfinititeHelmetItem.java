@@ -13,12 +13,12 @@ import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Blocks;
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -61,27 +61,27 @@ public class InfinititeHelmetItem extends Item {
         return player.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof InfinititeHelmetItem;
     }
 
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-        if (level.isClientSide || !(entity instanceof Player player)) return;
+    @Override
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, @Nullable EquipmentSlot slot) {
+        if (!(entity instanceof Player player)) return;
         if (!isWearing(player)) return;
-        if (!(level instanceof ServerLevel serverLevel)) return;
 
         // STAR VISION: permanent night vision
         addEffectIfNeeded(player, new MobEffectInstance(MobEffects.NIGHT_VISION, 300, 0, false, false, true));
 
         // STAR VISION: make nearby mobs glow (visible through walls)
         if (player.tickCount % 60 == 0) {
-            applyGlowToNearbyMobs(player, serverLevel);
+            applyGlowToNearbyMobs(player, level);
         }
 
         // MIND SHIELD: randomly confuse nearby hostile mobs
         if (player.tickCount % 40 == 0) {
-            applyMindShield(player, serverLevel);
+            applyMindShield(player, level);
         }
 
         // ORE VISION: scan for ores and show colored particles
         if (player.tickCount % ORE_SCAN_INTERVAL == 0) {
-            scanAndShowOres(player, serverLevel);
+            scanAndShowOres(player, level);
         }
     }
 

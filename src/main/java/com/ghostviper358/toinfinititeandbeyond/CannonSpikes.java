@@ -140,6 +140,14 @@ public final class CannonSpikes {
         return null;
     }
 
+    /**
+     * Forgets everything still in progress. Called when the server stops, so nothing keeps
+     * running against a closed world after you quit to the title screen.
+     */
+    public static void clearAll() {
+        PENDING.clear();
+    }
+
     /** Advances every spike attack by one tick. Called once per server tick. */
     public static void tick() {
         Iterator<Eruption> iterator = PENDING.iterator();

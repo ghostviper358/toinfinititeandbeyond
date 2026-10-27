@@ -1513,6 +1513,15 @@ public class UniversalDestroyer extends GiantBoss {
         return book;
     }
 
+    /**
+     * Forgets everything still in progress. Called when the server stops, so nothing keeps
+     * running against a closed world after you quit to the title screen.
+     */
+    public static void clearAll() {
+        RITUALS.clear();
+        ENDINGS.clear();
+    }
+
     /** Advances every summoning ritual and ending. Called once per server tick. */
     public static void tickRitualsAndEndings() {
         RITUALS.removeIf(Ritual::tick);

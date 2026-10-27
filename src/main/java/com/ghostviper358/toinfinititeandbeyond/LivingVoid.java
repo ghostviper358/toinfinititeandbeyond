@@ -695,6 +695,14 @@ public class LivingVoid extends GiantBoss {
         }
     }
 
+    /**
+     * Forgets everything still in progress. Called when the server stops, so nothing keeps
+     * running against a closed world after you quit to the title screen.
+     */
+    public static void clearAll() {
+        RITUALS.clear();
+    }
+
     /** Advances every summoning ritual. Called once per server tick. */
     public static void tickRituals() {
         RITUALS.removeIf(SummonRitual::tick);

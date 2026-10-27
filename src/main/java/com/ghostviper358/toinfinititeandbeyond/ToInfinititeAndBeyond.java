@@ -1126,17 +1126,16 @@ public final class ToInfinititeAndBeyond {
         TickEvent.PlayerTickEvent.Post.BUS.addListener(ToInfinititeAndBeyond::onPlayerTick);
 
         // Universal Sword shockwave ultimate: networking (client -> server "charge complete"
-        // packet - see UniversalSwordNetworking), a once-per-server-tick hook to advance any
-        // in-flight shockwave rings, and a client-only hook to track the held attack key (only
-        // the client knows whether that key is currently down).
+        // packet - see UniversalSwordNetworking) and a once-per-server-tick hook to advance any
+        // in-flight shockwave rings. (Tracking the held attack key is client-only - see
+        // ClientModEvents.)
         UniversalSwordNetworking.register();
         TickEvent.ServerTickEvent.Post.BUS.addListener(ToInfinititeAndBeyond::onServerTick);
-        TickEvent.ClientTickEvent.Post.BUS.addListener(UniversalSwordClientHandler::onClientTick);
 
         // Universal Leggings: Warp Dash (double-tap sneak) and Star Jumps (mid-air jumps) are
-        // spotted client-side and sent to the server - see UniversalLeggingsNetworking.
+        // spotted client-side (see ClientModEvents) and sent to the server - see
+        // UniversalLeggingsNetworking.
         UniversalLeggingsNetworking.register();
-        TickEvent.ClientTickEvent.Post.BUS.addListener(UniversalLeggingsClientHandler::onClientTick);
 
         // Universal Helmet: Eye Beam / Time Stop key packets (the keys themselves are client-only
         // - see ClientModEvents), Mind Control's target redirect, and two safety nets so Time
@@ -1146,6 +1145,18 @@ public final class ToInfinititeAndBeyond {
         LivingChangeTargetEvent.BUS.addListener((java.util.function.Predicate<LivingChangeTargetEvent>) UniversalHelmetItem::onChangeTarget);
         EntityJoinLevelEvent.BUS.addListener((java.util.function.Consumer<EntityJoinLevelEvent>) UniversalHelmetItem::onEntityJoin);
         ServerStoppingEvent.BUS.addListener(event -> UniversalHelmetItem.endAllTimeStops());
+
+        // Effects still in progress (spike eruptions, lightning chains, summoning rituals, storms,
+        // shockwaves...) remember the world they're in. Forget them when the server stops, or after
+        // quitting to the title screen they'd keep running against the closed world.
+        ServerStoppingEvent.BUS.addListener(event -> {
+            CannonSpikes.clearAll();
+            VoidLightning.clearAll();
+            LivingVoid.clearAll();
+            UniversalCoreItem.clearAll();
+            UniversalDestroyer.clearAll();
+            UniversalSwordItem.clearAll();
+        });
 
         // Universal Core: god-power key packets, true invincibility (nothing but another god can
         // hurt or kill a god), and noclip while flying - see UniversalCoreItem.
@@ -1234,6 +1245,13 @@ public final class ToInfinititeAndBeyond {
             RenderPlayerEvent.Pre.BUS.addListener((java.util.function.Consumer<RenderPlayerEvent.Pre>) UniversalSwordAnimations::onRenderPlayerPre);
             RenderPlayerEvent.Post.BUS.addListener(UniversalSwordAnimations::onRenderPlayerPost);
             ViewportEvent.ComputeCameraAngles.BUS.addListener(UniversalSwordAnimations::onComputeCameraAngles);
+
+            // Universal Sword: tracks the held attack key for the shockwave charge (only the client
+            // knows whether that key is currently down).
+            TickEvent.ClientTickEvent.Post.BUS.addListener(UniversalSwordClientHandler::onClientTick);
+
+            // Universal Leggings: spots Warp Dash (double-tap sneak) and Star Jumps (mid-air jumps).
+            TickEvent.ClientTickEvent.Post.BUS.addListener(UniversalLeggingsClientHandler::onClientTick);
 
             // Universal Helmet: Eye Beam / Time Stop key presses.
             TickEvent.ClientTickEvent.Post.BUS.addListener(UniversalHelmetClientHandler::onClientTick);

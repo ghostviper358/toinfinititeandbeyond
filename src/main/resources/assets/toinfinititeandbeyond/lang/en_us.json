@@ -47,5 +47,10 @@
   "entity.toinfinititeandbeyond.cannon_block": "Cannon Block",
   "block.toinfinititeandbeyond.infinitite_spike": "Infinitite Spike",
   "entity.toinfinititeandbeyond.cannon_black_hole": "Black Hole",
-  "entity.toinfinititeandbeyond.void_lightning_bolt": "Void Lightning"
+  "entity.toinfinititeandbeyond.void_lightning_bolt": "Void Lightning",
+  "item.toinfinititeandbeyond.void_helmet": "Void Helmet",
+  "item.toinfinititeandbeyond.void_chestplate": "Void Chestplate",
+  "item.toinfinititeandbeyond.void_leggings": "Void Leggings",
+  "item.toinfinititeandbeyond.void_boots": "Void Boots",
+  "entity.toinfinititeandbeyond.infinitite_arrow": "Infinitite Arrow"
 }
