@@ -57,6 +57,17 @@ The Black Hole Arm Cannon is an extremely powerful late-game weapon that fits ov
 - Looks like the cannon's little black hole, only big: black core, see-through purple shell, energy streaming in
 - Sight: pixels spiralling into a dark hollow middle
 
+### Mode 4: Void Lightning - DONE
+- **Unlock**: killing any boss (Infinitite Monstrosity, Living Void, Universal Destroyer, Wither, Ender Dragon, Warden, Elder Guardian) or another player unlocks it for 10 minutes. Each kill starts the 10 minutes over. When it runs out you get a message and it's locked again. No unlock needed in creative.
+- Switching to it shows how much unlock time is left
+- Right-click: black lightning strikes instantly where you're aiming (up to 128 blocks away)
+- 200 damage to everything within 12 blocks of where it lands
+- Then it jumps, one strike every 3 ticks, to up to 8 more monsters or players outside that 12-block area (each jump up to 24 blocks, always to the closest one it hasn't hit yet) - 200 damage each
+- Never hurts you or your pets, and never sets anything on fire
+- Costs a full cannon (60 ammo), one every 10 seconds
+- Look: a lightning bolt that's black on the inside with glowing purple edges; the sky and screen flash purple
+- Sight: a little flickering zig-zag bolt of pixels with four corner brackets
+
 ## Basic Properties
 - **Equipment Slot**: Worn on the arm, fits over the player's hand
 - **Appearance**: TBD (texture to be designed later)

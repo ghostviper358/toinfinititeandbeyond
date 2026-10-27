@@ -437,6 +437,17 @@ public final class ToInfinititeAndBeyond {
             .build(ENTITY_TYPES.key("cannon_black_hole"))
     );
 
+    // The black-and-purple lightning bolts of the Black Hole Arm Cannon's Void Lightning mode -
+    // just the look (see VoidLightning for the damage). Drawn by VoidLightningBoltRenderer.
+    public static final RegistryObject<EntityType<VoidLightningBolt>> VOID_LIGHTNING_BOLT = ENTITY_TYPES.register("void_lightning_bolt",
+        () -> EntityType.Builder.<VoidLightningBolt>of(VoidLightningBolt::new, MobCategory.MISC)
+            .noSave()
+            .sized(0.0F, 0.0F)
+            .clientTrackingRange(16)
+            .updateInterval(Integer.MAX_VALUE)
+            .build(ENTITY_TYPES.key("void_lightning_bolt"))
+    );
+
     // The purple spikes the Black Hole Arm Cannon's spike attack grows out of the ground (see
     // CannonSpikes). Shaped like pointed dripstone, can be walked into (and hurt when you do),
     // glow a little, can't be mined, drop nothing, and crumble away by themselves.
@@ -1143,6 +1154,9 @@ public final class ToInfinititeAndBeyond {
         LivingDeathEvent.BUS.addListener((java.util.function.Predicate<LivingDeathEvent>) UniversalCoreItem::onLivingDeath);
         LivingEvent.LivingTickEvent.BUS.addListener((java.util.function.Consumer<LivingEvent.LivingTickEvent>) UniversalCoreItem::onLivingTick);
 
+        // Black Hole Arm Cannon: beating a boss or another player unlocks Void Lightning for a while.
+        LivingDeathEvent.BUS.addListener((java.util.function.Consumer<LivingDeathEvent>) BlackHoleArmCannonItem::onLivingDeath);
+
         // Cosmic Apple's permanent max-health bonus: a fresh Player entity (created on
         // respawn, or on login) gets a brand-new AttributeMap that won't remember a
         // modifier that was only ever added to the old instance, so we re-sync it from
@@ -1263,6 +1277,7 @@ public final class ToInfinititeAndBeyond {
             event.registerEntityRenderer(VOID_ORB.get(), NoopRenderer::new);
             event.registerEntityRenderer(CANNON_BLOCK.get(), context -> new ThrownItemRenderer<>(context, 1.5f, true));
             event.registerEntityRenderer(CANNON_BLACK_HOLE.get(), CannonBlackHoleRenderer::new);
+            event.registerEntityRenderer(VOID_LIGHTNING_BOLT.get(), VoidLightningBoltRenderer::new);
             event.registerEntityRenderer(UNIVERSAL_DESTROYER.get(), UniversalDestroyerRenderer::new);
         }
 
@@ -1339,6 +1354,7 @@ public final class ToInfinititeAndBeyond {
         LivingVoid.tickRituals();
         UniversalDestroyer.tickRitualsAndEndings();
         CannonSpikes.tick();
+        VoidLightning.tick();
     }
 
     /**

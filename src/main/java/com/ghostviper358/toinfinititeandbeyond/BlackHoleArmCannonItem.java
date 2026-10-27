@@ -27,6 +27,12 @@ import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.renderer.GeoItemRenderer;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
+import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
+import net.minecraft.world.entity.boss.wither.WitherBoss;
+import net.minecraft.world.entity.monster.ElderGuardian;
+import net.minecraft.world.entity.monster.warden.Warden;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+
 import javax.annotation.Nullable;
 import java.util.function.Consumer;
 
@@ -47,6 +53,10 @@ import java.util.function.Consumer;
  *   pulls everything in, keeps hurting whatever reaches the middle, and eats the blocks around
  *   it, turning them into ammo (see {@link CannonBlackHole}). Costs half the ammo. Locked until
  *   you beat the Living Void (always available in creative).
+ * - Mode 4, Void Lightning: right-click and black lightning strikes where you're aiming, then
+ *   jumps to more targets (see {@link VoidLightning}). The strongest attack - it takes a full
+ *   cannon of ammo. Beating any boss (or another player) unlocks it for 10 minutes, then it fades
+ *   until you beat another (always available in creative).
  *
  * Ammo: {@link #MAX_AMMO} shots, stored on the item. Every shot uses one. Ammo slowly
  * refills by itself whenever you aren't firing, so you can never run out for good, but you
@@ -77,6 +87,10 @@ public class BlackHoleArmCannonItem extends Item implements GeoItem {
     private static final String READY_AT_KEY_SUFFIX = "ReadyAt";
     /** Player data (kept through death) that says they've unlocked the Black Hole mode. */
     private static final String BLACK_HOLE_UNLOCKED_KEY = ToInfinititeAndBeyond.MOD_ID + "_black_hole_unlocked";
+    /** Player data (kept through death): the game time their Void Lightning unlock runs out. */
+    private static final String VOID_LIGHTNING_UNTIL_KEY = ToInfinititeAndBeyond.MOD_ID + "_void_lightning_until";
+    /** How long beating a boss or player unlocks Void Lightning for (10 minutes). */
+    private static final int VOID_LIGHTNING_UNLOCK_TICKS = 20 * 60 * 10;
     private static final int AMMO_BAR_COLOR = 0xB040FF; // purple
     private static final int RECHARGE_BAR_COLOR = 0xFF55FF; // bright pink while the black hole refills it
 
@@ -89,7 +103,8 @@ public class BlackHoleArmCannonItem extends Item implements GeoItem {
     public enum Mode {
         HOMING_BLOCKS("Homing Blocks", 1, 0),
         SPIKES("Infinitite Spikes", 15, 40),
-        BLACK_HOLE("Black Hole", 30, 120);
+        BLACK_HOLE("Black Hole", 30, 120),
+        VOID_LIGHTNING("Void Lightning", MAX_AMMO, 200);
 
         public final String title;
         public final int ammoCost;
@@ -198,8 +213,60 @@ public class BlackHoleArmCannonItem extends Item implements GeoItem {
             SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 0.6f, 1.4f);
     }
 
+    // --- Void Lightning unlock (runs out) ---
+
+    /** Ticks of Void Lightning unlock left (always plenty in creative). */
+    private static long voidLightningTicksLeft(Player player) {
+        if (player.getAbilities().instabuild) {
+            return Long.MAX_VALUE;
+        }
+        long until = player.getPersistentData().getLongOr(VOID_LIGHTNING_UNTIL_KEY, 0L);
+        return Math.max(0L, until - player.level().getGameTime());
+    }
+
+    /** Beating a boss or another player unlocks Void Lightning for 10 minutes (starting over each time). */
+    public static void unlockVoidLightning(Player player) {
+        player.getPersistentData().putLong(VOID_LIGHTNING_UNTIL_KEY, player.level().getGameTime() + VOID_LIGHTNING_UNLOCK_TICKS);
+        player.displayClientMessage(Component.literal("§5§lVoid Lightning unlocked for 10 minutes!"), false);
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+            SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 0.5f, 1.6f);
+    }
+
+    /** Killing a boss (any of the mod's, or a vanilla one) or another player unlocks Void Lightning for the killer. */
+    public static void onLivingDeath(LivingDeathEvent event) {
+        LivingEntity dead = event.getEntity();
+        if (dead.level().isClientSide() || !(event.getSource().getEntity() instanceof Player killer) || killer == dead) {
+            return;
+        }
+        if (dead instanceof Player || isBoss(dead)) {
+            unlockVoidLightning(killer);
+        }
+    }
+
+    private static boolean isBoss(LivingEntity entity) {
+        return entity instanceof InfinititeMonstrosity || entity instanceof LivingVoid || entity instanceof UniversalDestroyer
+            || entity instanceof WitherBoss || entity instanceof EnderDragon || entity instanceof Warden || entity instanceof ElderGuardian;
+    }
+
+    /** Tells the player when their Void Lightning unlock has run out. */
+    private static void checkVoidLightningFaded(Player player) {
+        var data = player.getPersistentData();
+        if (data.contains(VOID_LIGHTNING_UNTIL_KEY) && voidLightningTicksLeft(player) <= 0) {
+            data.remove(VOID_LIGHTNING_UNTIL_KEY);
+            player.displayClientMessage(Component.literal("§8Void Lightning has faded - beat a boss or another player to unlock it again"), false);
+        }
+    }
+
     private static boolean canUse(Player player, Mode mode) {
-        return mode != Mode.BLACK_HOLE || isBlackHoleUnlocked(player);
+        return switch (mode) {
+            case BLACK_HOLE -> isBlackHoleUnlocked(player);
+            case VOID_LIGHTNING -> voidLightningTicksLeft(player) > 0;
+            default -> true;
+        };
+    }
+
+    private static String lockedReason(Mode mode) {
+        return mode == Mode.BLACK_HOLE ? "beat the Living Void" : "beat a boss or another player";
     }
 
     /** True while the black hole is refilling an emptied cannon (it can't fire until it's full). */
@@ -213,6 +280,9 @@ public class BlackHoleArmCannonItem extends Item implements GeoItem {
 
     @Override
     public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, @Nullable EquipmentSlot slot) {
+        if (entity instanceof Player player && level.getGameTime() % 20 == 0) {
+            checkVoidLightningFaded(player);
+        }
         int ammo = getAmmo(stack);
         if (isRecharging(stack)) {
             if (level.getGameTime() % RECHARGE_TICKS == 0) {
@@ -266,9 +336,9 @@ public class BlackHoleArmCannonItem extends Item implements GeoItem {
         if (mode == Mode.SPIKES) {
             return fireOnce(level, player, stack, mode);
         }
-        if (mode == Mode.BLACK_HOLE) {
+        if (mode == Mode.BLACK_HOLE || mode == Mode.VOID_LIGHTNING) {
             if (!canUse(player, mode)) {
-                player.displayClientMessage(Component.literal("§8Black Hole is locked - beat the Living Void to unlock it"), true);
+                player.displayClientMessage(Component.literal("§8" + mode.title + " is locked - " + lockedReason(mode) + " to unlock it"), true);
                 return InteractionResult.FAIL;
             }
             return fireOnce(level, player, stack, mode);
@@ -285,11 +355,16 @@ public class BlackHoleArmCannonItem extends Item implements GeoItem {
         Mode mode = getMode(stack).next();
         String locked = "";
         while (!canUse(player, mode)) {
-            locked += " §8(" + mode.title + " locked - beat the Living Void)";
+            locked += " §8(" + mode.title + " locked - " + lockedReason(mode) + ")";
             mode = mode.next();
         }
         setMode(stack, mode);
-        player.displayClientMessage(Component.literal("§5Mode: §d" + mode.title + locked), true);
+        String timeLeft = "";
+        if (mode == Mode.VOID_LIGHTNING && !player.getAbilities().instabuild) {
+            long seconds = voidLightningTicksLeft(player) / 20;
+            timeLeft = String.format(" §7(%d:%02d left)", seconds / 60, seconds % 60);
+        }
+        player.displayClientMessage(Component.literal("§5Mode: §d" + mode.title + timeLeft + locked), true);
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
             SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 0.5f, 1.2f + mode.ordinal() * 0.3f);
     }
@@ -317,6 +392,10 @@ public class BlackHoleArmCannonItem extends Item implements GeoItem {
         }
         if (mode == Mode.BLACK_HOLE) {
             CannonBlackHole.fire(serverLevel, player);
+        }
+        if (mode == Mode.VOID_LIGHTNING && !VoidLightning.fire(serverLevel, player)) {
+            player.displayClientMessage(Component.literal("§7Nothing there to strike"), true);
+            return InteractionResult.FAIL;
         }
         setReadyAt(stack, mode, level.getGameTime() + mode.cooldownTicks);
         if (!free) {

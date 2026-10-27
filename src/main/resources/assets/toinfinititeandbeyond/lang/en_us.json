@@ -46,5 +46,6 @@
   "item.toinfinititeandbeyond.black_hole_arm_cannon": "Black Hole Arm Cannon",
   "entity.toinfinititeandbeyond.cannon_block": "Cannon Block",
   "block.toinfinititeandbeyond.infinitite_spike": "Infinitite Spike",
-  "entity.toinfinititeandbeyond.cannon_black_hole": "Black Hole"
+  "entity.toinfinititeandbeyond.cannon_black_hole": "Black Hole",
+  "entity.toinfinititeandbeyond.void_lightning_bolt": "Void Lightning"
 }

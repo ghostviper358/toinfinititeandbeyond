@@ -8,6 +8,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
@@ -32,10 +33,12 @@ import javax.annotation.Nullable;
  *   middle as you aim. Each attack mode has its own sight.
  * - Recharging: while a cannon's black hole is refilling it, purple energy streams into the black
  *   hole from all around - for every player holding one, so everyone nearby can see it.
+ * - Void Lightning: when one strikes nearby, the sky flashes and the screen flashes purple.
  */
 public final class BlackHoleArmCannonClientHandler {
 
     private static final ResourceLocation SIGHT_LAYER = ResourceLocation.fromNamespaceAndPath(ToInfinititeAndBeyond.MOD_ID, "cannon_sight");
+    private static final ResourceLocation FLASH_LAYER = ResourceLocation.fromNamespaceAndPath(ToInfinititeAndBeyond.MOD_ID, "void_lightning_flash");
 
     /** How much of the way to fully aimed each tick (4 ticks to aim). */
     private static final float AIM_SPEED = 0.25f;
@@ -45,8 +48,14 @@ public final class BlackHoleArmCannonClientHandler {
     /** Energy particles streaming into a recharging black hole each tick. */
     private static final int RECHARGE_PARTICLES_PER_TICK = 3;
 
+    /** Players within this many blocks of a Void Lightning strike see the flash. */
+    private static final double FLASH_DISTANCE = 96.0;
+    /** How long the purple screen flash takes to fade (ticks). */
+    private static final int FLASH_TICKS = 8;
+
     private static float aim;
     private static float prevAim;
+    private static int flashTicks;
 
     private BlackHoleArmCannonClientHandler() {
     }
@@ -88,6 +97,9 @@ public final class BlackHoleArmCannonClientHandler {
             return;
         }
 
+        if (flashTicks > 0) {
+            flashTicks--;
+        }
         prevAim = aim;
         boolean aiming = canAim(player) && minecraft.screen == null && minecraft.options.keyAttack.isDown();
         aim = Mth.clamp(aim + (aiming ? AIM_SPEED : -AIM_SPEED), 0.0f, 1.0f);
@@ -123,6 +135,30 @@ public final class BlackHoleArmCannonClientHandler {
         layers.addConditionTo(ForgeLayeredDraw.PRE_SLEEP_STACK, ForgeLayeredDraw.CROSSHAIR, () -> !showSight());
         layers.addAbove(ForgeLayeredDraw.PRE_SLEEP_STACK, SIGHT_LAYER, ForgeLayeredDraw.CROSSHAIR,
             BlackHoleArmCannonClientHandler::renderSight);
+        layers.addBelow(ForgeLayeredDraw.PRE_SLEEP_STACK, FLASH_LAYER, ForgeLayeredDraw.CROSSHAIR,
+            BlackHoleArmCannonClientHandler::renderFlash);
+    }
+
+    // --- Void Lightning flash ---
+
+    /** Called when a Void Lightning bolt appears: nearby, the sky lights up and the screen flashes purple. */
+    public static void onVoidLightning(VoidLightningBolt bolt) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player == null || minecraft.level == null
+                || minecraft.player.distanceToSqr(bolt) > FLASH_DISTANCE * FLASH_DISTANCE) {
+            return;
+        }
+        minecraft.level.setSkyFlashTime(2);
+        flashTicks = FLASH_TICKS;
+    }
+
+    private static void renderFlash(GuiGraphics graphics, DeltaTracker deltaTracker) {
+        if (flashTicks <= 0) {
+            return;
+        }
+        float fade = (flashTicks - deltaTracker.getGameTimeDeltaPartialTick(true)) / FLASH_TICKS;
+        int alpha = (int) (Mth.clamp(fade, 0.0f, 1.0f) * 0x70);
+        graphics.fill(0, 0, graphics.guiWidth(), graphics.guiHeight(), ARGB.color(alpha, 0x80, 0x20, 0xD0));
     }
 
     // --- The sight ---
@@ -157,6 +193,8 @@ public final class BlackHoleArmCannonClientHandler {
                 cooldown(cannon, BlackHoleArmCannonItem.Mode.SPIKES, partialTick));
             case BLACK_HOLE -> renderBlackHoleSight(graphics, cx, cy, time, aimed, recharging,
                 cooldown(cannon, BlackHoleArmCannonItem.Mode.BLACK_HOLE, partialTick));
+            case VOID_LIGHTNING -> renderVoidLightningSight(graphics, cx, cy, player.tickCount, aimed, recharging,
+                cooldown(cannon, BlackHoleArmCannonItem.Mode.VOID_LIGHTNING, partialTick));
         }
     }
 
@@ -233,6 +271,41 @@ public final class BlackHoleArmCannonClientHandler {
         int edge = ARGB.color(brightness, 0xE0, 0x90, 0xFF);
         graphics.fill(cx - 2, cy - 2, cx + 3, cy + 3, edge);
         graphics.fill(cx - 1, cy - 1, cx + 2, cy + 2, ARGB.color(0xE0, 0x05, 0x00, 0x0A));
+    }
+
+    /**
+     * Mode 4 (Void Lightning): a little zig-zag bolt of pixels coming down into the middle, which
+     * flickers into a new shape every few ticks, with four corner brackets around it that close in
+     * as you aim. While cooling down (or recharging) it goes dim and stops flickering.
+     */
+    private static void renderVoidLightningSight(GuiGraphics graphics, int cx, int cy, int tickCount, float aimed,
+                                                 boolean recharging, float cooldown) {
+        boolean dim = recharging || cooldown > 0.0f;
+        int brightness = dim ? 0x60 : (int) Mth.lerp(aimed, 0xB0, 0xFF);
+        int bracket = ARGB.color(brightness, 0xC0, 0x50, 0xFF);
+        int boltEdge = ARGB.color(brightness, 0xB0, 0x40, 0xFF);
+        int boltCore = ARGB.color(brightness, 0x10, 0x00, 0x18);
+
+        // Corner brackets.
+        int r = Math.round(Mth.lerp(aimed, 12.0f, 7.0f)) + (recharging ? 5 : 0);
+        for (int sx = -1; sx <= 1; sx += 2) {
+            for (int sy = -1; sy <= 1; sy += 2) {
+                int x = cx + sx * r;
+                int y = cy + sy * r;
+                graphics.fill(Math.min(x, x - sx * 3), y, Math.max(x, x - sx * 3) + 1, y + 1, bracket);
+                graphics.fill(x, Math.min(y, y - sy * 3), x + 1, Math.max(y, y - sy * 3) + 1, bracket);
+            }
+        }
+
+        // The bolt: zig-zags down from above into the middle. A new shape every 3 ticks.
+        RandomSource shape = RandomSource.create(dim ? 0L : tickCount / 3);
+        int x = cx;
+        for (int y = cy - 9; y <= cy; y += 3) {
+            int nextX = y == cy ? cx : cx + shape.nextInt(5) - 2;
+            graphics.fill(Math.min(x, nextX) - 1, y - 1, Math.max(x, nextX) + 2, y + 2, boltEdge);
+            graphics.fill(Math.min(x, nextX), y, Math.max(x, nextX) + 1, y + 1, boltCore);
+            x = nextX;
+        }
     }
 
     // --- Recharging ---
