@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "combat",
+  "pattern": [
+    "VNV",
+    "IBI",
+    "VIV"
+  ],
+  "key": {
+    "V": "toinfinititeandbeyond:void_ingot",
+    "N": "minecraft:nether_star",
+    "I": "toinfinititeandbeyond:infinitite_ingot",
+    "B": "toinfinititeandbeyond:infinitite_bow"
+  },
+  "result": {
+    "id": "toinfinititeandbeyond:black_hole_arm_cannon",
+    "count": 1
+  }
+}

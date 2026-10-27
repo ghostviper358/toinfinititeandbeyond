@@ -37,6 +37,8 @@ import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraft.client.renderer.entity.NoopRenderer;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
+import net.minecraftforge.client.event.ComputeFovModifierEvent;
+import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.RenderBlockScreenEffectEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
@@ -410,6 +412,27 @@ public final class ToInfinititeAndBeyond {
             .setId(ITEMS.key("infinitite_bow"))
             .durability(3124) // Same durability as Infinitite Sword
         )
+    );
+
+    // Creates the Black Hole Arm Cannon - a regenerating-ammo arm cannon that sits between the
+    // Void gear and the Universal gear (see BlackHoleArmCannonItem). Ammo, not durability, is
+    // what limits it, so it never breaks.
+    public static final RegistryObject<Item> BLACK_HOLE_ARM_CANNON = ITEMS.register("black_hole_arm_cannon",
+        () -> new BlackHoleArmCannonItem(new Item.Properties()
+            .setId(ITEMS.key("black_hole_arm_cannon"))
+            .rarity(Rarity.EPIC)
+            .stacksTo(1)
+            .component(DataComponents.UNBREAKABLE, Unit.INSTANCE)
+        )
+    );
+
+    // The homing blocks the Black Hole Arm Cannon fires (drawn as Void Blocks - see onRegisterRenderers)
+    public static final RegistryObject<EntityType<CannonBlockEntity>> CANNON_BLOCK = ENTITY_TYPES.register("cannon_block",
+        () -> EntityType.Builder.<CannonBlockEntity>of(CannonBlockEntity::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .clientTrackingRange(8)
+            .updateInterval(1)
+            .build(ENTITY_TYPES.key("cannon_block"))
     );
 
     // Creates the Infinitite Arrow - special ammo that works extra well with Infinitite Bow
@@ -1124,6 +1147,7 @@ public final class ToInfinititeAndBeyond {
             event.accept(INFINITITE_SWORD.get());
             event.accept(UNIVERSAL_SWORD.get());
             event.accept(INFINITITE_BOW.get());
+            event.accept(BLACK_HOLE_ARM_CANNON.get());
             event.accept(INFINITITE_ARROW_ITEM.get());
             event.accept(INFINITITE_HELMET.get());
             event.accept(INFINITITE_CHESTPLATE.get());
@@ -1175,6 +1199,12 @@ public final class ToInfinititeAndBeyond {
             // Universal Core: god-power keys, and no block overlay while flying through walls.
             TickEvent.ClientTickEvent.Post.BUS.addListener(UniversalCoreClientHandler::onClientTick);
             RenderBlockScreenEffectEvent.BUS.addListener((java.util.function.Predicate<RenderBlockScreenEffectEvent>) UniversalCoreClientHandler::onBlockScreenEffect);
+
+            // Black Hole Arm Cannon: aiming down the sight with left-click (instead of attacking),
+            // the zoom while aiming, and the black hole's recharge particles.
+            TickEvent.ClientTickEvent.Post.BUS.addListener(BlackHoleArmCannonClientHandler::onClientTick);
+            InputEvent.InteractionKeyMappingTriggered.BUS.addListener((java.util.function.Predicate<InputEvent.InteractionKeyMappingTriggered>) BlackHoleArmCannonClientHandler::onInteractionKey);
+            ComputeFovModifierEvent.BUS.addListener(BlackHoleArmCannonClientHandler::onComputeFov);
         }
 
         @SubscribeEvent
@@ -1183,6 +1213,8 @@ public final class ToInfinititeAndBeyond {
             UniversalGodHearts.onAddLayers(event);
             // The bosses' custom boss bars.
             BossBars.onAddLayers(event);
+            // Black Hole Arm Cannon: its floating-pixel sight replaces the crosshair.
+            BlackHoleArmCannonClientHandler.onAddLayers(event);
         }
 
         @SubscribeEvent
@@ -1198,6 +1230,7 @@ public final class ToInfinititeAndBeyond {
             event.registerEntityRenderer(MONSTROSITY_ROCK.get(), context -> new ThrownItemRenderer<>(context, 3.0f, true));
             event.registerEntityRenderer(LIVING_VOID.get(), LivingVoidRenderer::new);
             event.registerEntityRenderer(VOID_ORB.get(), NoopRenderer::new);
+            event.registerEntityRenderer(CANNON_BLOCK.get(), context -> new ThrownItemRenderer<>(context, 1.5f, true));
             event.registerEntityRenderer(UNIVERSAL_DESTROYER.get(), UniversalDestroyerRenderer::new);
         }
 

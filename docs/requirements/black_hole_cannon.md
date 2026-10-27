@@ -3,6 +3,38 @@
 ## Overview
 The Black Hole Arm Cannon is an extremely powerful late-game weapon that fits over the player's arm. It features four different attack modes, a regenerating ammo system, and unique mechanics including block absorption and a dangerous black hole ability.
 
+## Remake Decisions (2026-10-27)
+- **Tier**: Between the Void gear and the Universal gear - stronger than the Void Sword, much weaker than the Universal Sword.
+- **Each attack has its own strength** (fast attacks hit softer, big attacks hit harder).
+- **Holding**: Held in the main hand like a weapon (no special arm slot); the 3D model wraps over the arm.
+- **Built one mode at a time**, playtesting after each.
+- **Crafting Recipe** (decided):
+  ```
+  V N V      V = Void Ingot, N = Nether Star
+  I B I      I = Infinitite Ingot, B = Infinitite Bow
+  V I V
+  ```
+- **Ammo**: 60 shots, never breaks. Refills 4 shots a second while you're not firing. Purple bar under the item shows ammo.
+
+### Look (design v3)
+- Gauntlet over the fist, big long barrel with glowing rings, and 4 long fins (one per corner) that hang past the muzzle and bend in like claws
+- Comes to life when held: the fins slide out and a spinning black hole appears between the fin tips - black inside, see-through purple outside
+- The ammo floats around the black hole as 4 little void blocks (one per quarter of the ammo)
+- Model made from a cube list (gen_black_hole_arm_cannon_model.py) - pictures with preview_item_model.py
+
+### Recharging
+- Run out of ammo -> the black hole spins fast and sucks in purple energy, refilling 10 shots a second
+- Can't fire again until it's completely full
+
+### Aiming
+- Hold left-click to aim down the sight (no attacking/mining with the cannon): zooms in and moves the cannon to the middle of the screen
+- The crosshair is replaced by floating purple pixels that close in when aiming. Each attack mode gets its own sight.
+
+### Mode 1: Homing Blocks - DONE
+- Hold right-click: fires about 7 blocks a second (1 ammo each)
+- 8 damage on a direct hit + 4 splash damage within 2 blocks (no block breaking)
+- Locks on to whatever's closest to the crosshair (up to 128 blocks away), flies up to 1000 blocks
+
 ## Basic Properties
 - **Equipment Slot**: Worn on the arm, fits over the player's hand
 - **Appearance**: TBD (texture to be designed later)

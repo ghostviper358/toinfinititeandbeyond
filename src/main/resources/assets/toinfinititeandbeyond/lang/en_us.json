@@ -42,5 +42,7 @@
   "item.toinfinititeandbeyond.universal_destroyer_spawn_egg": "Universal Destroyer Spawn Egg",
   "block.toinfinititeandbeyond.void_seal": "Void Seal",
   "item.toinfinititeandbeyond.destroyers_crown": "Destroyer's Crown",
-  "block.toinfinititeandbeyond.destroyer_sword_fragment": "Destroyer's Broken Blade"
+  "block.toinfinititeandbeyond.destroyer_sword_fragment": "Destroyer's Broken Blade",
+  "item.toinfinititeandbeyond.black_hole_arm_cannon": "Black Hole Arm Cannon",
+  "entity.toinfinititeandbeyond.cannon_block": "Cannon Block"
 }

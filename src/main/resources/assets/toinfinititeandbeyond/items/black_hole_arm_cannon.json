@@ -1,0 +1,9 @@
+{
+  "model": {
+    "type": "minecraft:special",
+    "base": "toinfinititeandbeyond:item/black_hole_arm_cannon",
+    "model": {
+      "type": "geckolib:geckolib"
+    }
+  }
+}
