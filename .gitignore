@@ -25,8 +25,7 @@ run
 forge*changelog.txt
 nul
 
-# Design pictures (and the models they are drawn from) made by preview_item_model.py
-# and the gen_*.py scripts - re-made whenever the scripts run
+# Design preview pictures, and the models preview_item_model.py draws them from
 preview_*.png
 preview_*.json
 
