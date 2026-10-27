@@ -24,3 +24,11 @@ run
 # Files from Forge MDK
 forge*changelog.txt
 nul
+
+# Design pictures (and the models they are drawn from) made by preview_item_model.py
+# and the gen_*.py scripts - re-made whenever the scripts run
+preview_*.png
+preview_*.json
+
+# Log files
+logs
