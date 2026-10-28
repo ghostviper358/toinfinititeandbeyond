@@ -6,6 +6,16 @@ a giant void sword. Inspired by the general idea of Minecraft Dungeons' Redstone
 (hunched rock golem, glowing cracks) - but darker, purple, armed with a sword, and an original
 model and texture.
 
+## Summoning
+- Throw **8 Void Ingots and 1 Nether Star** on the ground close together (within about 2 blocks).
+- The ground shakes: chunks of rock and purple sparks spiral in on the offering for 5 seconds,
+  with rumbling digging sounds and a chat message warning everyone.
+- Then lightning strikes, the ground bursts open, and the Monstrosity climbs out right there.
+- Only one at a time: it can't be summoned within 64 blocks of a ritual already under way or a
+  living Monstrosity. Exactly 8 ingots and 1 star are used; anything extra is left on the ground.
+- This is the first step of the boss chain in survival: the Monstrosity drops the Monstrosity
+  Heart (summons the Living Void), which drops the Void Seal (summons the Universal Destroyer).
+
 ## Looks
 - A hunched rock golem: huge chest, a small head sunk low between massive boulder shoulders
   (heavy brow, deep-set glowing eyes, a jutting jaw with glowing teeth),

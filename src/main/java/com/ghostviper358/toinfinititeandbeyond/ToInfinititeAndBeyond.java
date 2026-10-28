@@ -135,7 +135,7 @@ public final class ToInfinititeAndBeyond {
 
     // Creates the Void Ingot - a rare crafting material from Void Ore
     public static final RegistryObject<Item> VOID_INGOT = ITEMS.register("void_ingot",
-        () -> new Item(new Item.Properties().setId(ITEMS.key("void_ingot")))
+        () -> new VoidIngotItem(new Item.Properties().setId(ITEMS.key("void_ingot")))
     );
 
     // Creates the Sapphire item
@@ -1152,6 +1152,7 @@ public final class ToInfinititeAndBeyond {
         ServerStoppingEvent.BUS.addListener(event -> {
             CannonSpikes.clearAll();
             VoidLightning.clearAll();
+            InfinititeMonstrosity.clearAll();
             LivingVoid.clearAll();
             UniversalCoreItem.clearAll();
             UniversalDestroyer.clearAll();
@@ -1369,6 +1370,7 @@ public final class ToInfinititeAndBeyond {
         UniversalSwordItem.tickActiveSpins();
         UniversalHelmetItem.tickTimeStops();
         UniversalCoreItem.tickPowers();
+        InfinititeMonstrosity.tickRituals();
         LivingVoid.tickRituals();
         UniversalDestroyer.tickRitualsAndEndings();
         CannonSpikes.tick();

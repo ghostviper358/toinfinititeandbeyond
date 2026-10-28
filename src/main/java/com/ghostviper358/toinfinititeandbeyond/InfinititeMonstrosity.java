@@ -1,5 +1,6 @@
 package com.ghostviper358.toinfinititeandbeyond;
 
+import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -15,6 +16,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
@@ -27,6 +29,7 @@ import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.core.component.DataComponents;
@@ -34,6 +37,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.util.Mth;
@@ -43,7 +47,9 @@ import java.util.List;
 
 /**
  * Infinitite Monstrosity - a towering golem of dark rock split by glowing purple Infinitite
- * cracks, gripping a giant void sword. The mod's boss. See docs/requirements/infinitite_monstrosity.md.
+ * cracks, gripping a giant void sword. The first boss, summoned by throwing 8 Void Ingots and a
+ * Nether Star on the ground together (see {@link #checkForSummon}).
+ * See docs/requirements/infinitite_monstrosity.md.
  *
  * Stats: 1000 health (500 hearts), 30 attack damage, 30 armor / 10 toughness, immune to
  * knockback, 5x normal size. Hunts down the nearest player in range. Its boss health bar is drawn
@@ -122,6 +128,17 @@ public class InfinititeMonstrosity extends Monster implements ModBoss {
     private static final double BLACK_HOLE_PULL_RADIUS = 24.0;
     private static final double BLACK_HOLE_CRUSH_RADIUS = 3.5;
     private static final float BLACK_HOLE_DAMAGE = 10.0f;
+
+    /** Summoning: what has to be thrown down together, and how long the ritual builds before it arrives. */
+    private static final int SUMMON_VOID_INGOTS = 8;
+    private static final int SUMMON_STARS = 1;
+    private static final double SUMMON_GATHER_RADIUS = 2.5;
+    private static final int RITUAL_TICKS = 100;
+
+    /** No new summoning while a ritual or a living Monstrosity is this close. */
+    private static final double SUMMON_BLOCK_RADIUS = 64.0;
+
+    private static final List<SummonRitual> RITUALS = new ArrayList<>();
 
     private static final ResourceLocation ENRAGED_SPEED_ID = ResourceLocation.fromNamespaceAndPath(ToInfinititeAndBeyond.MOD_ID, "monstrosity_enraged_speed");
     private static final ResourceLocation ENRAGED_DAMAGE_ID = ResourceLocation.fromNamespaceAndPath(ToInfinititeAndBeyond.MOD_ID, "monstrosity_enraged_damage");
@@ -649,5 +666,140 @@ public class InfinititeMonstrosity extends Monster implements ModBoss {
         book.set(DataComponents.WRITTEN_BOOK_CONTENT,
             new WrittenBookContent(Filterable.passThrough("Whispers of the Void"), "???", 3, pages, true));
         return book;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Summoning
+    // ---------------------------------------------------------------------------
+
+    /**
+     * Called every tick for each stack of Void Ingots lying on the ground (VoidIngotItem). If at
+     * least 8 Void Ingots and 1 Nether Star are lying close together, the offering is taken -
+     * exactly 8 ingots and 1 star; anything extra is left - and the ritual begins. (The ingots do
+     * the checking because a vanilla Nether Star can't run code of its own.)
+     */
+    public static void checkForSummon(ItemEntity ingots) {
+        if (!(ingots.level() instanceof ServerLevel level) || !ingots.onGround() || ingots.tickCount % 10 != 0) {
+            return;
+        }
+        // One at a time: not while a summoning is already under way nearby, or a Monstrosity is
+        // already here.
+        for (SummonRitual ritual : RITUALS) {
+            if (ritual.level == level && ritual.center.distanceTo(ingots.position()) < SUMMON_BLOCK_RADIUS) {
+                return;
+            }
+        }
+        if (!level.getEntitiesOfClass(InfinititeMonstrosity.class, ingots.getBoundingBox().inflate(SUMMON_BLOCK_RADIUS),
+                InfinititeMonstrosity::isAlive).isEmpty()) {
+            return;
+        }
+        List<ItemEntity> nearby = level.getEntitiesOfClass(ItemEntity.class, ingots.getBoundingBox().inflate(SUMMON_GATHER_RADIUS),
+            ItemEntity::isAlive);
+        int voidIngots = 0;
+        int stars = 0;
+        for (ItemEntity item : nearby) {
+            if (item.getItem().is(ToInfinititeAndBeyond.VOID_INGOT.get())) {
+                voidIngots += item.getItem().getCount();
+            } else if (item.getItem().is(Items.NETHER_STAR)) {
+                stars += item.getItem().getCount();
+            }
+        }
+        if (voidIngots < SUMMON_VOID_INGOTS || stars < SUMMON_STARS) {
+            return;
+        }
+
+        Vec3 center = ingots.position();
+        take(nearby, ToInfinititeAndBeyond.VOID_INGOT.get().getDefaultInstance(), SUMMON_VOID_INGOTS);
+        take(nearby, Items.NETHER_STAR.getDefaultInstance(), SUMMON_STARS);
+        RITUALS.add(new SummonRitual(level, center));
+        level.getServer().getPlayerList().broadcastSystemMessage(
+            Component.literal("§5§lThe ground begins to shake... purple light bleeds through the cracks."), false);
+    }
+
+    /** Removes {@code amount} of an item from the stacks lying on the ground. */
+    private static void take(List<ItemEntity> items, ItemStack kind, int amount) {
+        for (ItemEntity item : items) {
+            if (amount <= 0) {
+                return;
+            }
+            ItemStack stack = item.getItem();
+            if (!ItemStack.isSameItem(stack, kind)) {
+                continue;
+            }
+            int used = Math.min(amount, stack.getCount());
+            stack.shrink(used);
+            amount -= used;
+            if (stack.isEmpty()) {
+                item.discard();
+            }
+        }
+    }
+
+    /**
+     * Forgets everything still in progress. Called when the server stops, so nothing keeps
+     * running against a closed world after you quit to the title screen.
+     */
+    public static void clearAll() {
+        RITUALS.clear();
+    }
+
+    /** Advances every summoning ritual. Called once per server tick. */
+    public static void tickRituals() {
+        RITUALS.removeIf(SummonRitual::tick);
+    }
+
+    /**
+     * The summoning: the ground shakes and spits out chunks of rock and purple light that spiral
+     * in on the offering, faster and faster, until the Monstrosity bursts up out of the earth.
+     */
+    private static final class SummonRitual {
+        final ServerLevel level;
+        final Vec3 center;
+        int ticks = 0;
+
+        SummonRitual(ServerLevel level, Vec3 center) {
+            this.level = level;
+            this.center = center;
+        }
+
+        /** @return true once the Monstrosity has arrived. */
+        boolean tick() {
+            ticks++;
+            double progress = ticks / (double) RITUAL_TICKS;
+            double radius = 7.0 * (1.0 - progress) + 0.5;
+            BlockParticleOption rock = new BlockParticleOption(ParticleTypes.BLOCK, Blocks.DEEPSLATE.defaultBlockState());
+            for (int i = 0; i < 4; i++) {
+                double angle = ticks * 0.3 + i * (Math.PI / 2.0);
+                double x = center.x + Math.cos(angle) * radius;
+                double z = center.z + Math.sin(angle) * radius;
+                level.sendParticles(rock, true, true, x, center.y + 0.2, z, 4, 0.3, 0.1, 0.3, 0.1);
+                level.sendParticles(ParticleTypes.WITCH, true, true, x, center.y + 0.5, z, 2, 0.1, 0.3, 0.1, 0.0);
+            }
+            if (ticks % 15 == 0) {
+                level.playSound(null, center.x, center.y, center.z, SoundEvents.WARDEN_DIG, SoundSource.HOSTILE, 4.0f, 0.5f);
+            }
+            if (ticks < RITUAL_TICKS) {
+                return false;
+            }
+
+            for (int i = 0; i < 3; i++) {
+                LightningBolt bolt = new LightningBolt(EntityType.LIGHTNING_BOLT, level);
+                bolt.setPos(center.x + (i - 1) * 4.0, center.y, center.z + (i == 1 ? 4.0 : -3.0));
+                bolt.setVisualOnly(true);
+                level.addFreshEntity(bolt);
+            }
+            InfinititeMonstrosity boss = ToInfinititeAndBeyond.INFINITITE_MONSTROSITY.get().create(level, EntitySpawnReason.TRIGGERED);
+            if (boss != null) {
+                boss.snapTo(center.x, center.y, center.z, 0.0f, 0.0f);
+                level.addFreshEntity(boss);
+            }
+            level.sendParticles(rock, true, true, center.x, center.y + 1.0, center.z, 600, 5.0, 2.0, 5.0, 0.4);
+            level.sendParticles(ParticleTypes.DRAGON_BREATH, true, true, center.x, center.y + 3.0, center.z, 200, 4.0, 3.0, 4.0, 0.1);
+            level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, true, true, center.x, center.y + 1.0, center.z, 2, 2.0, 0.5, 2.0, 0.0);
+            level.playSound(null, center.x, center.y, center.z, SoundEvents.WARDEN_EMERGE, SoundSource.HOSTILE, 5.0f, 0.5f);
+            level.getServer().getPlayerList().broadcastSystemMessage(
+                Component.literal("§5§lThe Infinitite Monstrosity rises from the earth!"), false);
+            return true;
+        }
     }
 }
