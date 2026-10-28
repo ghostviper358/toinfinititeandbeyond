@@ -44,6 +44,8 @@ A giant floating eye of darkness. It opens rifts that spit out Endermen and Vexe
 ### 3. The Universal Destroyer
 The final boss: a 46-block-tall horned titan with **100,000 health** and three phases of attacks, including star falls, shadow swords, gravity crushes and a supernova. Win the fight and you get an ending you won't forget. **To summon it**, place the **Void Seal** that the Living Void drops, then break it.
 
+**Boss vs boss:** each boss fights back against whatever hurts it. Summon two together, and when one's attack hits the other, they turn on each other. Grab a front-row seat while the Monstrosity takes a swing at the Living Void!
+
 Each boss drops a lore book that tells part of the story. The Destroyer drops the **Destroyer's Crown** and the **Universal Core**...
 
 ---
