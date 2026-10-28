@@ -30,3 +30,6 @@ preview_*.json
 
 # Log files
 logs
+
+# Personal Claude Code settings and agents stay on this computer
+.claude/
